@@ -1,0 +1,36 @@
+- gather_facts: false
+  hosts: localhost
+  tasks:
+  - name: 'UNDO: delete the sql server'
+    os_server:
+      flavor: '{{ nova_flavor.name }}'
+      floating_ip_pools: '{{ osp_admin_net.name }}'
+      image: '{{ glance_image.name }}'
+      key_name: '{{ osp_user.username }}'
+      meta:
+        group: db
+        hostname: db0
+      name: db0
+      network: '{{ osp_priv.net_name }}'
+      security_groups: '{{ osp_priv.security_group }}'
+      state: absent
+      volumes:
+      - dbvol
+  - name: 'UNDO: delete DB volume in cinder'
+    os_volume:
+      display_name: dbvol
+      state: absent
+  - name: 'UNDO: delete the web server'
+    os_server:
+      flavor: '{{ nova_flavor.name }}'
+      floating_ip_pools: '{{ osp_admin_net.name }}'
+      image: '{{ glance_image.name }}'
+      key_name: '{{ osp_user.username }}'
+      meta:
+        group: web
+        hostname: web{{ item }}
+      name: web{{ item }}
+      network: '{{ osp_priv.net_name }}'
+      security_groups: '{{ osp_priv.security_group }}'
+      state: absent
+    with_sequence: start=0 end=2

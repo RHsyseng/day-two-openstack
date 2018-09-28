@@ -1,0 +1,70 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: create admin network (flat)
+    os_network:
+      state: present
+      name: '{{ osp_admin_net.name }}'
+      external: True
+      provider_network_type: '{{ osp_admin_net.type }}'
+      provider_physical_network: '{{ osp_admin_net.provider }}'
+      shared: True
+    tags:
+    - adminnet
+    when:
+    - osp_admin_net.type != 'vlan'
+  - name: create admin network (vlan)
+    os_network:
+      state: present
+      name: '{{ osp_admin_net.name }}'
+      external: True
+      provider_network_type: '{{ osp_admin_net.type }}'
+      provider_physical_network: '{{ osp_admin_net.provider }}'
+      provider_segmentation_id: '{{ osp_admin_net.segmentation_id }}'
+      shared: True
+    tags:
+    - adminnet
+    when:
+    - osp_admin_net.type == 'vlan'
+  - name: create admin subnet
+    os_subnet:
+      state: present
+      name: '{{ osp_admin_subnet.name }}'
+      network_name: '{{ osp_admin_net.name }}'
+      cidr: '{{ osp_admin_subnet.cidr }}'
+      gateway_ip: '{{ osp_admin_subnet.gateway }}'
+      enable_dhcp: False
+      allocation_pool_start: '{{ osp_admin_subnet.dhcp_start }}'
+      allocation_pool_end: '{{ osp_admin_subnet.dhcp_end }}'
+      ip_version: 4
+    tags:
+    - adminnet
+  - name: create nova flavor
+    os_nova_flavor:
+      state: present
+      name: '{{ nova_flavor.name }}'
+      ram: '{{ nova_flavor.ram }}'
+      vcpus: '{{ nova_flavor.vcpus }}'
+      disk: '{{ nova_flavor.disk }}'
+      ephemeral: '{{ nova_flavor.ephemeral }}'
+  - name: create a project
+    os_project:
+      state: present
+      name: '{{ osp_user.project_name }}'
+      domain: 'default'
+      description: '{{ osp_user.project_name }}'
+  - name: create a user
+    os_user:
+      state: present
+      name: '{{ osp_user.username }}'
+      password: '{{ osp_user.password }}'
+      email: '{{  osp_useremail }}'
+      default_project: '{{ osp_user.project_name }}'
+      domain: 'default'
+  - name: grant project access to '{{ osp_user.username }}'
+    os_user_role:
+      user: '{{ osp_user.username }}'
+      role: 'admin'
+      project: '{{ osp_user.project_name }}'
+#      domain: 'default'

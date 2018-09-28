@@ -1,0 +1,40 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: gather instance facts
+    os_server_facts:
+      server: 'web*'
+    register: server_facts
+  - debug:
+      msg: '{{ item.name }}: {{ item.private_v4 }} / {{ item.public_v4 }}'
+    loop_control:
+      label: '{{ item.name }}'
+    with_items: '{{ server_facts.ansible_facts.openstack_servers }}'
+  - name: create load balancer and listener
+    os_loadbalancer:
+      name: weblb
+      state: present
+      vip_subnet: '{{ osp_priv.subnet_name }}'
+      public_network: '{{ osp_admin_net.name }}'
+      auto_public_ip: yes
+      listeners:
+      - name: weblb_80
+        protocol: TCP
+        protocol_port: 80
+        pool:
+          name: weblb_80_pool
+          protocol: TCP
+    register: load_balancer
+  - name: add web servers to pool
+    os_member:
+      state: present
+      name: '{{ item.name }}'
+      pool: weblb_80_pool
+      address: '{{ item.private_v4 }}'
+      protocol_port: 80
+    with_items: '{{ server_facts.ansible_facts.openstack_servers }}'
+    loop_control:
+      label: '{{ item.name }}'
+  - debug:
+      msg: "load balancer public IP: {{ load_balancer.loadbalancer.public_vip_address }}"

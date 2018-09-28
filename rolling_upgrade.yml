@@ -1,0 +1,44 @@
+---
+- hosts: web
+  gather_facts: true
+  user: centos
+  serial: 1
+  tasks:
+  - name: check for pending updates
+    yum:
+      list: updates
+    register: yum_update
+  - block:
+      - name: remove web server from pool
+        os_member:
+          state: absent
+          name: '{{ ansible_hostname }}'
+          pool: weblb_80_pool
+        delegate_to: localhost
+      - name: update packages
+        package:
+          name: '*'
+          state: latest
+        become: true
+      - name: reboot server
+        shell: sleep 5 && reboot &
+        async: 1
+        poll: 0
+      - name: wait for server
+        wait_for_connection:
+          connect_timeout: 20
+          sleep: 5
+          delay: 5
+          timeout: 600
+        become: true
+      - name: put server back in pool
+        os_member:
+          state: present
+          name: '{{ ansible_hostname }}'
+          pool: weblb_80_pool
+          address: '{{ ansible_default_ipv4.address }}'
+          protocol_port: 80
+        delegate_to: localhost
+    when:
+    - yum_update.results | length > 0
+

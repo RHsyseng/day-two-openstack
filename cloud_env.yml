@@ -1,0 +1,42 @@
+---
+osp_admin:
+  auth_url: 'http://10.10.10.110:5000/v3'
+  username: 'admin'
+  password: 'r3dh@t2017'
+  project_name: 'Default'
+osp_user:
+  auth_url: '{{ osp_admin.auth_url }}'
+  project_name: 'tenant0'
+  username: 'user0'
+  password: 'P@ssw0rd'
+osp_useremail: 'user0@localhost'
+osp_userpubkey: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+osp_admin_net:
+  name: 'nova'
+  type: 'flat'
+  provider: 'datacentre'
+osp_admin_subnet:
+  name: 'nova'
+  cidr: '10.10.10.0/21'
+  gateway: '10.10.10.254'
+  dhcp_start: '10.10.10.131'
+  dhcp_end: '10.10.10.149'
+osp_priv:
+  net_name: 'private_net'
+  subnet_name: 'private_subnet'
+  cidr: '192.168.42.0/24'
+  dns:
+    - 10.10.10.247
+    - 10.10.10.248
+  router_name: 'private_router'
+  security_group: 'private_secgroup'
+glance_image:
+  name: 'centos7-x86_64'
+  file: '/srv/images/CentOS-7-x86_64-GenericCloud-1808.qcow2'
+  disk: 'qcow2'
+nova_flavor:
+  name: 'dbweb'
+  ram: '2048'
+  vcpus: '2'
+  disk: '20'
+  ephemeral: '0'

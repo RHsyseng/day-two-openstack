@@ -1,0 +1,161 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+  - name: create user keypair
+    os_keypair:
+      state: present
+      name: '{{ osp_user.username }}'
+      public_key: '{{ osp_userpubkey }}'
+    tags:
+    - keys
+    - common
+  - name: upload image to glance
+    os_image:
+      state: present
+      name: '{{ glance_image.name }}'
+      filename: '{{ glance_image.file }}'
+      container_format: bare
+      disk_format: '{{ glance_image.disk }}'
+    tags:
+    - qcow2
+    - glance
+    - common
+  - name: create a security group
+    os_security_group:
+      state: present
+      name: '{{ osp_priv.security_group }}'
+    tags:
+    - common
+    - secgroups
+  - name: open up ping
+    os_security_group_rule:
+      state: present
+      security_group: '{{ osp_priv.security_group }}'
+      protocol: icmp
+      remote_ip_prefix: 0.0.0.0/0
+    tags:
+    - secgroups
+    - common
+  - name: ...and required ports
+    os_security_group_rule:
+      state: present
+      security_group: '{{ osp_priv.security_group }}'
+      protocol: tcp
+      port_range_min: '{{ item }}'
+      port_range_max: '{{ item }}'
+      remote_ip_prefix: 0.0.0.0/0
+    with_items:
+    - 22
+    - 80
+    - 27017
+    - 31347
+    - 31348
+    tags:
+    - secgroups
+    - common
+  - name: create private network
+    os_network:
+      state: present
+      name: '{{ osp_priv.net_name }}'
+    tags:
+    - priv_nets
+    - common
+  - name: create private subnet
+    os_subnet:
+      state: present
+      name: '{{ osp_priv.subnet_name }}'
+      network_name: '{{ osp_priv.net_name }}'
+      cidr: '{{ osp_priv.cidr }}'
+      dns_nameservers: '{{ osp_priv.dns }}'
+      enable_dhcp: True
+    tags:
+    - priv_nets
+    - common
+  - name: create private router
+    os_router:
+      state: present
+      name: '{{ osp_priv.router_name }}'
+      interfaces: '{{ osp_priv.subnet_name }}'
+      network: '{{ osp_admin_net.name }}'
+    tags:
+    - priv_nets
+    - common
+## web
+  - name: create the web server
+    os_server:
+      state: present
+      name: "web{{ item }}"
+      image: '{{ glance_image.name }}'
+      key_name: '{{ osp_user.username }}'
+      flavor: '{{ nova_flavor.name }}'
+      floating_ip_pools: '{{ osp_admin_net.name }}'
+      network: '{{ osp_priv.net_name }}'
+      security_groups: '{{ osp_priv.security_group }}'
+      meta:
+        hostname: "web{{ item }}"
+        group: "web"
+      userdata: |
+        {%- raw -%}#!/bin/bash
+        yum -y install httpd
+        systemctl enable httpd
+        systemctl start httpd
+        rm /var/www/html/index.html
+        echo "hello from $(hostname)" > /var/www/html/index.html.production
+        echo "database is currently down for maintenace" > /var/www/html/index.html.maintenance
+        ln -s /var/www/html/index.html.production /var/www/html/index.html
+        {% endraw %}
+    register: web_server
+    with_sequence: start=0 end=2
+
+#  - debug: var=web_server
+  - debug:
+      msg: '{{ item.server.name }}: {{ item.server.accessIPv4 }}'
+    with_items: '{{ web_server.results }}'
+    loop_control:
+      label: "{{ item.server.name }}"
+
+## db
+  - name: create DB volume in cinder
+    os_volume:
+      state: present
+      size: 10
+      display_name: dbvol
+
+  - name: create the sql server
+    os_server:
+      state: present
+      name: "db0"
+      image: '{{ glance_image.name }}'
+      key_name: '{{ osp_user.username }}'
+      flavor: '{{ nova_flavor.name }}'
+      floating_ip_pools: '{{ osp_admin_net.name }}'
+      network: '{{ osp_priv.net_name }}'
+      security_groups: '{{ osp_priv.security_group }}'
+      meta:
+        hostname: db0
+        group: db
+      userdata: |
+        {%- raw -%}#!/bin/bash
+        echo checking disks
+        lsblk
+        echo partitioning disk
+        parted -a optimal -s /dev/vdb mklabel gpt mkpart primary 0% 100%
+        echo making filesystem
+        mkfs.xfs -L dbvol /dev/vdb1
+        echo updating fstab
+        echo -e "LABEL=dbvol\t/var/lib/mongodb\txfs\tdefaults\t0 0" >> /etc/fstab
+        echo making and mounting mount point
+        mkdir -p /var/lib/mongodb
+        mount -a
+        echo installing required packages
+        yum -y install epel-release
+        yum -y install mongodb-server mongodb
+        echo starting and enabling mongodb
+        systemctl enable mongod
+        systemctl start mongod
+        {% endraw %}
+      volumes:
+      - dbvol
+    register: db_server
+  - debug: var=db_server.server.accessIPv4

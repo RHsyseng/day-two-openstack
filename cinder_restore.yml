@@ -1,0 +1,54 @@
+---
+- hosts: db
+  gather_facts: true
+  user: centos
+  tasks:
+  - name: stop database
+    systemd:
+      name: mongod
+      state: stopped
+    become: true
+  - name: unmount db volume
+    mount:
+      path: /var/lib/mongodb
+      state: unmounted
+    become: true
+  - name: detach volume from server
+    os_server_volume: 
+      state: absent
+      server: db0
+      volume: dbvol
+    delegate_to: localhost
+  - name: restore cinder backup
+    command: openstack volume backup restore dbvol_backup dbvol
+    delegate_to: localhost
+    register: vol_restore
+    failed_when:
+    - vol_restore.rc > 0
+    - "'VolumeBackupsRestore' not in vol_restore.stderr"
+  - name: wait for restore to finish
+    command: openstack volume show -c status -f value dbvol
+    register: restore_progress
+    until: restore_progress.stdout is search("available")
+    retries: 60
+    delay: 5
+    delegate_to: localhost
+  - name: reattach volume to server
+    os_server_volume: 
+      state: present
+      server: db0
+      volume: dbvol
+      device: /dev/vdb
+    delegate_to: localhost
+  - name: mount db volume
+    mount:
+      path: /var/lib/mongodb
+      state: mounted
+      src: LABEL=dbvol
+      fstype: xfs
+    become: true
+  - name: start database
+    systemd:
+      name: mongod
+      state: started
+    become: true
