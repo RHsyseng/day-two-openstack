@@ -1,7 +1,6 @@
 ---
-- hosts: localhost
-  gather_facts: false
-  user: centos
+- name: Backing up Database via Cinder
+  hosts: localhost
   tasks:
-  - name: take cinder backup
+  - name: Create a Cinder Backup of Database Volume
     command: openstack volume backup create --force --name dbvol_backup dbvol
