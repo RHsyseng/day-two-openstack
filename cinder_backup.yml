@@ -4,7 +4,7 @@
   tasks:
   - name: Create a Cinder Backup of Database Volume
     shell: "source /root/keystonerc_demo && openstack volume backup create --force --name dbvol_backup dbvol"
-  - name: Source the keysstonerc_demo file and run the openstack volume backup list command
+  - name: Source the keystonerc_demo file and run the openstack volume backup list command
     shell: "source /root/keystonerc_demo && sleep 45 && openstack volume backup list"
     register: output
 
