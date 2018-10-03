@@ -1,6 +1,12 @@
 ---
-- name: Backing up Database via Cinder
+- name: Backing up the database via the Cinder service
   hosts: localhost
   tasks:
   - name: Create a Cinder Backup of Database Volume
-    command: openstack volume backup create --force --name dbvol_backup dbvol
+    shell: "source /root/keystonerc_demo && openstack volume backup create --force --name dbvol_backup dbvol"
+  - name: Source the keysstonerc_demo file and run the openstack volume backup list command
+    shell: "source /root/keystonerc_demo && sleep 45 && openstack volume backup list"
+    register: output
+
+  - debug: var=output.stdout_lines
+...
