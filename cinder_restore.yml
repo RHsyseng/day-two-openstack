@@ -24,7 +24,7 @@
     - vol_restore.rc > 0
     - "'VolumeBackupsRestore' not in vol_restore.stderr"
   - name: Wait for the restore of the database volume
-    command: "source /root/keystonerc_demo && openstack volume show -c status -f value dbvol"
+    shell: "source /root/keystonerc_demo && openstack volume show -c status -f value dbvol"
     register: restore_progress
     until: restore_progress.stdout is search("available")
     retries: 60
