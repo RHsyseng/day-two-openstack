@@ -1,5 +1,6 @@
 ---
 - hosts: localhost
+  name: deploy a 3 web / 1 db application stack
   gather_facts: false
   tasks:
   - name: create user keypair
@@ -119,7 +120,7 @@
   - name: create DB volume in cinder
     os_volume:
       state: present
-      size: 10
+      size: 1
       display_name: dbvol
 
   - name: create the sql server
