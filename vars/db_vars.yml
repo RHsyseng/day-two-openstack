@@ -1,0 +1,6 @@
+service_name: mongod
+volume_name: dbvol
+db_vol_path: /var/lib/mongodb
+server_name: db0
+device_path: /dev/vdb
+cloud: mycloud
