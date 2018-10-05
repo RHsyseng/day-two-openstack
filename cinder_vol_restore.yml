@@ -1,0 +1,34 @@
+---
+- name: Restore Cinder backup volume
+  shell: "source /root/keystonerc_demo && openstack volume backup restore dbvol_backup dbvol"
+  delegate_to: localhost
+  register: vol_restore
+  failed_when:
+  - vol_restore.rc > 0
+  - "'VolumeBackupsRestore' not in vol_restore.stderr"
+- name: Wait for the restore of the database volume
+  shell: "source /root/keystonerc_demo && openstack volume show -c status -f value dbvol"
+  register: restore_progress
+  until: restore_progress.stdout is search("available")
+  retries: 60
+  delay: 5
+  delegate_to: localhost
+- name: Reattach volume to the database server
+  os_server_volume: 
+    state: present
+    cloud: "{{ cloud }}"
+    server: "{{ server_name }}"
+    volume: "{{ volume_name }}"
+    device: "{{ device_path }}"
+  delegate_to: localhost
+- name: Mount the database volume
+  mount:
+    path: "{{ db_vol_path }}"
+    state: mounted
+    src: LABEL="{{ volume_name }}" 
+    fstype: xfs
+- name: Start the MongoDB database
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+...
