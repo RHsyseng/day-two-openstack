@@ -1,0 +1,17 @@
+---
+- name: Stop the MongoDB database
+  systemd:
+    name: "{{ service_name }}"
+    state: stopped
+- name: Unmount the database volume
+  mount:
+    path: "{{ db_vol_path }}"
+    state: unmounted
+- name: Detach volume from server
+  os_server_volume: 
+    state: absent
+    cloud: "{{ cloud }}"
+    server: "{{ server_name }}"
+    volume: "{{ volume_name }}"
+  delegate_to: localhost
+  ...
