@@ -1,0 +1,10 @@
+---
+- hosts: db
+  vars_files:
+    - vars/db_vars.yml  
+  tasks:
+   - name: Initial preparation for Cinder volume restoration
+     include: tasks/cinder_vol_prep.yml
+   - name: Restoring a Cinder backup volume 
+     include: tasks/cinder_vol_restore.yml
+...
