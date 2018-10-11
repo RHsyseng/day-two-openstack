@@ -1,31 +1,12 @@
-- gather_facts: false
+---
+- name: delete the load balancer
+  gather_facts: false
   hosts: localhost
   tasks:
-  - name: 'UNDO: gather instance facts'
-    os_server_facts:
-      server: web*
-    register: server_facts
-  - loop_control:
-      label: '{{ item.name }}'
-    name: 'UNDO: add web servers to pool'
-    os_member:
-      address: '{{ item.private_v4 }}'
-      name: '{{ item.name }}'
-      pool: weblb_80_pool
-      protocol_port: 80
-      state: absent
-    with_items: '{{ server_facts.ansible_facts.openstack_servers }}'
   - name: 'UNDO: create load balancer and listener'
     os_loadbalancer:
-      auto_public_ip: true
-      listeners:
-      - name: weblb_80
-        pool:
-          name: weblb_80_pool
-          protocol: TCP
-        protocol: TCP
-        protocol_port: 80
       name: weblb
-      public_network: '{{ osp_admin_net.name }}'
       state: absent
-      vip_subnet: '{{ osp_priv.subnet_name }}'
+      vip_network: public
+      vip_subnet: '{{ osp_admin_subnet.name }}'
+...

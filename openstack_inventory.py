@@ -127,8 +127,8 @@ def get_host_groups(inventory, refresh=False, cloud=None):
 
 def append_hostvars(hostvars, groups, key, server, namegroup=False):
     hostvars[key] = dict(
-        ansible_ssh_host=server['interface_ip'],
-        ansible_host=server['interface_ip'],
+        ansible_ssh_host=server['accessIPv4'],
+        ansible_host=server['accessIPv4'],
         openstack=server)
 
     metadata = server.get('metadata', {})
