@@ -3,9 +3,9 @@
   hosts: localhost
   tasks:
   - name: Create a Cinder Backup of Database Volume
-    shell: "source /root/keystonerc_demo && openstack volume backup create --force --name dbvol_backup dbvol"
-  - name: Source the keystonerc_demo file and run the openstack volume backup list command
-    shell: "source /root/keystonerc_demo && sleep 45 && openstack volume backup list"
+    shell: "openstack volume backup create --force --name dbvol_backup dbvol"
+  - name: Wait for backup to complete and then run the openstack volume backup list command
+    shell: "sleep 45 && openstack volume backup list"
     register: output
 
   - debug: var=output.stdout_lines

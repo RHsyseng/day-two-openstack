@@ -1,15 +1,14 @@
 ---
-- hosts: localhost
-  name: deploy a 3 web / 1 db application stack
+- name: deploy a 2 web / 1 db application stack
+  hosts: localhost
   gather_facts: false
   tasks:
   - name: create user keypair
     os_keypair:
       state: present
-      name: '{{ osp_user.username }}'
-      public_key: '{{ osp_userpubkey }}'
+      name: 'stack_key'
+      public_key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
     tags:
-    - keys
     - common
   - name: upload image to glance
     os_image:
@@ -19,7 +18,6 @@
       container_format: bare
       disk_format: '{{ glance_image.disk }}'
     tags:
-    - qcow2
     - glance
     - common
   - name: create a security group
@@ -55,40 +53,13 @@
     tags:
     - secgroups
     - common
-  - name: create private network
-    os_network:
-      state: present
-      name: '{{ osp_priv.net_name }}'
-    tags:
-    - priv_nets
-    - common
-  - name: create private subnet
-    os_subnet:
-      state: present
-      name: '{{ osp_priv.subnet_name }}'
-      network_name: '{{ osp_priv.net_name }}'
-      cidr: '{{ osp_priv.cidr }}'
-      dns_nameservers: '{{ osp_priv.dns }}'
-      enable_dhcp: True
-    tags:
-    - priv_nets
-    - common
-  - name: create private router
-    os_router:
-      state: present
-      name: '{{ osp_priv.router_name }}'
-      interfaces: '{{ osp_priv.subnet_name }}'
-      network: '{{ osp_admin_net.name }}'
-    tags:
-    - priv_nets
-    - common
 ## web
-  - name: create the web server
+  - name: create the web servers
     os_server:
       state: present
       name: "web{{ item }}"
       image: '{{ glance_image.name }}'
-      key_name: '{{ osp_user.username }}'
+      key_name: 'stack_key'
       flavor: '{{ nova_flavor.name }}'
       floating_ip_pools: '{{ osp_admin_net.name }}'
       network: '{{ osp_priv.net_name }}'
@@ -107,9 +78,8 @@
         ln -s /var/www/html/index.html.production /var/www/html/index.html
         {% endraw %}
     register: web_server
-    with_sequence: start=0 end=2
+    with_sequence: start=0 end=1
 
-#  - debug: var=web_server
   - debug:
       msg: '{{ item.server.name }}: {{ item.server.accessIPv4 }}'
     with_items: '{{ web_server.results }}'
@@ -128,7 +98,7 @@
       state: present
       name: "db0"
       image: '{{ glance_image.name }}'
-      key_name: '{{ osp_user.username }}'
+      key_name: 'stack_key'
       flavor: '{{ nova_flavor.name }}'
       floating_ip_pools: '{{ osp_admin_net.name }}'
       network: '{{ osp_priv.net_name }}'
@@ -152,6 +122,7 @@
         echo installing required packages
         yum -y install epel-release
         yum -y install mongodb-server mongodb
+        sed -i 's/"$/ --smallfiles"/g' /etc/sysconfig/mongod
         echo starting and enabling mongodb
         systemctl enable mongod
         systemctl start mongod
@@ -160,3 +131,4 @@
       - dbvol
     register: db_server
   - debug: var=db_server.server.accessIPv4
+...
