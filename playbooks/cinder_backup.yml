@@ -1,0 +1,28 @@
+---
+- name: Backing up the database via the Cinder service
+  hosts: db
+  tasks:
+  - name: Delete existing Cinder Backup
+    shell: "openstack volume backup delete dbvol_backup"
+    ignore_errors: true
+    delegate_to: localhost
+  - name: Stop the database
+    systemd:
+      name: mongod
+      state: stopped
+    become: true
+  - name: Create a Cinder Backup of Database Volume
+    shell: "openstack volume backup create --force --name dbvol_backup dbvol"
+    delegate_to: localhost
+  - name: Wait for backup to complete and then run the openstack volume backup list command
+    shell: "sleep 45 && openstack volume backup list"
+    register: output
+    delegate_to: localhost
+  - name: Start the database
+    systemd:
+      name: mongod
+      state: started
+    become: true
+
+  - debug: var=output.stdout_lines
+...

@@ -1,0 +1,27 @@
+---
+- name: create build dir
+  file:
+    path: '{{ build_dir }}/glog'
+    state: directory
+    mode: 0755
+    owner: '{{ ansible_user_id }}'
+  register: mkbuild
+  become: true
+
+- name: sync src code
+  synchronize:
+    src: src
+    dest: '{{ build_dir }}/glog/'
+  notify:
+  - restart httpd
+
+- name:  set selinux context
+  sefcontext:
+    target: '{{ build_dir }}/glog/src(/.*)?'
+    setype: httpd_sys_content_t
+    state: present
+  become: true
+
+- name: apply context
+  command: /usr/sbin/restorecon -Rv {{ build_dir }}/glog/src/
+  become: true

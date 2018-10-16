@@ -1,0 +1,36 @@
+---
+- name: common tasks for all hosts
+  hosts: db, web
+  tasks:
+  - name: include common tasks
+    include_role:
+      name: common
+  tags:
+  - common
+- name: setup tasks for db host
+  hosts: db
+  tasks:
+  - name: include web setup tasks
+    include_role:
+      name: db
+  tags:
+  - db
+- name: setup tasks for web hosts
+  hosts: web
+  vars:
+    build_dir: '/srv'
+    api_port: '31337'
+    ui_port: '80'
+  tasks:
+  - name: include api setup tasks
+    include_role:
+      name: api
+    tags:
+    - api
+  - name: include ui setup tasks
+    include_role:
+      name: ui
+    tags:
+    - ui
+  tags:
+  - web

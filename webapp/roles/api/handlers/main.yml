@@ -1,0 +1,10 @@
+---
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+    enabled: true
+  become: true
+- name: reload firewalld
+  command: firewall-cmd --reload
+  become: true

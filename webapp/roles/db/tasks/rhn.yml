@@ -1,0 +1,9 @@
+---
+- name: install required packages
+  yum:
+      name: '{{ item }}'
+      state: installed
+  become: true
+  with_items:
+  - mongodb-server
+  - mongodb

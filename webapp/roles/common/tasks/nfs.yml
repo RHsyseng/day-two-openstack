@@ -1,0 +1,24 @@
+---
+- name: mk nfs dir
+  file:
+    path: '{{ glog_mnt }}'
+    state: directory
+    mode: 0755
+    owner: '{{ ansible_user_id }}'
+  become: true
+- name: mount nfs share
+  mount:
+    name: '{{ glog_mnt }}'
+    src: '{{ nfs_share }}'
+    state: mounted
+    fstype: nfs
+  become: true
+- name: allow httpd to r/w nfs
+  seboolean:
+    name: httpd_use_nfs
+    state: yes
+    persistent: yes
+  become: true
+  tags:
+  - selinux
+

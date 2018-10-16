@@ -1,0 +1,20 @@
+Listen {{ api_port }}
+<VirtualHost *:{{ api_port }}>
+    ServerName {{ ansible_fqdn }}
+
+    SetEnv MONGODB 'mongodb://{{ hostvars[groups['db'][0]].ansible_default_ipv4.address }}:27017/'
+    SetEnv MONGODB_HOST '{{ hostvars[groups['db'][0]].ansible_default_ipv4.address }}'
+    SetEnv MONGODB_USER 'glog'
+    SetEnv MONGODB_PASSWORD 'gl0g'
+    SetEnv MONGODB_DATABASE 'glog'
+    WSGIDaemonProcess glog_api user={{ ansible_user }} group=centos threads=5
+    WSGIScriptAlias / {{ build_dir }}/glog/src/glog-api/glog_api.wsgi
+
+    <Directory {{ build_dir }}/glog/src/glog-api>
+        WSGIProcessGroup glog_api
+        WSGIApplicationGroup %{GLOBAL}
+        #Order deny,allow
+        #Allow from all
+	Require all granted
+    </Directory>
+</VirtualHost>

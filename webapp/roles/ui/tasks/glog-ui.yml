@@ -1,0 +1,44 @@
+---
+- name: install modules
+  command: pip install --editable '{{ build_dir }}/glog/src/{{ item }}'
+  with_items:
+  - glog-ui
+  become: true
+  tags:
+  - pip
+
+- name: allow http to listen on app port
+  seport:
+    ports: '{{ item }}'
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+  tags:
+  - selinux
+  with_items:
+  - '{{ ui_port }}'
+
+- name: allow httpd to net connect
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+  become: true
+  tags:
+  - selinux
+
+- name: remote port 80 from default httpd config
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    regexp: '^Listen 80'
+    line: '#Listen 80'
+  become: true
+
+- name: copy wsgi config files
+  template:
+    src: glog_ui.conf.j2
+    dest: /etc/httpd/conf.d/glog_ui.conf
+  become: true
+  notify:
+  - restart httpd
