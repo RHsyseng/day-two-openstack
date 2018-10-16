@@ -1,0 +1,16 @@
+Listen {{ ui_port }}
+<VirtualHost *:{{ ui_port }}>
+    ServerName {{ ansible_fqdn }}
+
+    SetEnv APIURL 'http://{{ ansible_default_ipv4.address }}:{{ api_port }}/glog'
+    WSGIDaemonProcess glog_ui user={{ ansible_user }} group=centos threads=5
+    WSGIScriptAlias / {{ build_dir }}/glog/src/glog-ui/glog_ui.wsgi
+
+    <Directory {{ build_dir}}/glog/src/glog-ui>
+        WSGIProcessGroup glog_ui
+        WSGIApplicationGroup %{GLOBAL}
+        #Order deny,allow
+        #Allow from all
+	Require all granted
+    </Directory>
+</VirtualHost>

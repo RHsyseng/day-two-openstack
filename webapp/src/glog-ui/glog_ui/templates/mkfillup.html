@@ -1,0 +1,24 @@
+{% extends "skeleton.html" %}
+{% block title %}mkfillup/{% endblock %}
+{% block content %}
+  <h1>mkfillup</h1>
+  <div class=form>
+    <form action="{{ url_for('mkfillup') }}" method="post">
+        <div>
+            date: <input type=text name=date value=''>
+        </div>
+        <div>
+            distance: <input type=text name=distance value=''>
+        </div>
+        <div>
+            volume: <input type=text name=volume value=''>
+        </div>
+        <div>
+            cost: <input type=text name=cost value=''>
+        </div>
+        <div align=center>
+        <input type=submit value='fillup++'>
+        </div>
+    </form>
+  </div>
+{% endblock %}

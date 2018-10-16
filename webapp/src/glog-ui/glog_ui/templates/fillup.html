@@ -1,0 +1,18 @@
+{% extends "skeleton.html" %}
+{% block title %}fillups/{% endblock %}
+{% block content %}
+  <h1>fillups</h1>
+  <div>
+  <table>
+  <th>date</th><th>distance</th><th>volume</th><th>cost</th>
+
+      <tr>
+        <td>{{ fillup.date }}</td>
+        <td>{{ fillup.distance }}</td>
+        <td>{{ fillup.volume }}</td>
+        <td>{{ fillup.cost }}</td>
+      </tr>
+  </table>
+  </div>
+{% endblock %}
+

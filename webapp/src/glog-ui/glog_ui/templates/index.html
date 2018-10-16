@@ -1,0 +1,12 @@
+{% extends "skeleton.html" %}
+{% block title %}{% endblock %}
+{% block content %}
+  <h1>glog!</h1>
+        <center>
+            <a href="{{ url_for('get_graph', g_type='total_distance') }}"><img src="{{ url_for('mkgraph', g_type='total_distance') }}"></a>
+            <a href="{{ url_for('get_graph', g_type='total_gas') }}"><img src="{{ url_for('mkgraph', g_type='total_gas') }}"></a>
+            <br>
+            <a href="{{ url_for('get_graph', g_type='lper100k') }}"><img src="{{ url_for('mkgraph', g_type='lper100k') }}"></a>
+            <a href="{{ url_for('get_graph', g_type='perlitre') }}"><img src="{{ url_for('mkgraph', g_type='perlitre') }}"></a>
+        </center>
+{% endblock %}

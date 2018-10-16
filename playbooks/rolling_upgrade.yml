@@ -1,5 +1,6 @@
 ---
-- hosts: web
+- name: perform a rolling OS upgrade of web nodes
+  hosts: web
   gather_facts: true
   user: centos
   serial: 1
@@ -13,7 +14,7 @@
         os_member:
           state: absent
           name: '{{ ansible_hostname }}'
-          pool: weblb_80_pool
+          pool: weblb_pool
         delegate_to: localhost
       - name: update packages
         package:
@@ -35,10 +36,10 @@
         os_member:
           state: present
           name: '{{ ansible_hostname }}'
-          pool: weblb_80_pool
+          pool: weblb_pool
           address: '{{ ansible_default_ipv4.address }}'
           protocol_port: 80
         delegate_to: localhost
     when:
     - yum_update.results | length > 0
-
+...

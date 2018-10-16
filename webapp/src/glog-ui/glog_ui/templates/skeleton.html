@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    {% block head %}
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
+    <title>glog://{% block title %}{% endblock %}</title>
+    {% endblock %}
+  </head>
+  <body>
+    <div class="header">
+      <div class="left">
+      <b><a href="/">glog://</a></b>  <a href="/fillups/">fillups/</a><a href="/mkfillup/">++</a>
+      </div>
+      <div class="right">stats: {{ stats.total_distance }} Km | {{ stats.total_gas | round(2, 'common')}} L | {{ stats.lper100k | round(2, 'common')}} L/100 Km ({{ stats.mpg | round(2, 'common')}} mpg)
+      </div>
+    </div>
+    <div class="content">{% block content %}{% endblock %}</div>
+    <div class="footer">
+      {% block footer %}
+      <div class="left">
+      <a href="/_nuke/" class="warning">DON'T CLICK ME</a>
+      </div>
+      <div class="right">
+      served by: {{ stats.host }}
+      {% endblock %}
+    </div>
+  </body>
+</html>

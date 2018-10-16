@@ -1,0 +1,6 @@
+{% extends "skeleton.html" %}
+{% block title %}{% endblock %}
+{% block content %}
+  <h1>glog!</h1>
+        <center><img src="{{ url_for('mkgraph', g_type=g_type, big=True) }}"></center>
+{% endblock %}

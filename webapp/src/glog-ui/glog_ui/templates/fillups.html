@@ -1,0 +1,22 @@
+{% extends "skeleton.html" %}
+{% block title %}fillups/{% endblock %}
+{% block content %}
+  <h1>fillups</h1>
+  <div>
+  <table>
+  <th>date</th><th>distance</th><th>volume</th><th>cost</th>
+
+  {% for fillup in fillups %}
+      <tr>
+        <td>{{ fillup.date }}</td>
+        <td>{{ fillup.distance }}</td>
+        <td>{{ fillup.volume }}</td>
+        <td>{{ fillup.cost }}</td>
+      </tr>
+  {% else %}
+    <em>404 fillup not found</em>
+  {% endfor %}
+  </table>
+  </div>
+{% endblock %}
+
