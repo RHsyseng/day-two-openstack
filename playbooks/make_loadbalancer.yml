@@ -17,7 +17,6 @@
       name: weblb
       state: present
       vip_network: public
-      vip_subnet: '{{ osp_admin_subnet.name }}'
       timeout: 600
     register: load_balancer
   - name: create the listener

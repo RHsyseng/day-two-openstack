@@ -6,7 +6,7 @@ setup(
     version='0.170404',
     include_package_data=True,
     install_requires=[
-        'Flask==0.12.2',
+        'Flask',
         'matplotlib==2.1.2',
     ],
     setup_requires=[

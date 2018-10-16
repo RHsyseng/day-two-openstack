@@ -7,8 +7,8 @@ setup(
     include_package_data=True,
     install_requires=[
         'bson',
-        'Flask==0.12.2',
-        'flask-restplus==0.10.1',
+        'Flask',
+        'flask-restplus',
         'pymongo==3.6.0',
         'Werkzeug==0.14.1',
         'python-dateutil==2.6.1',
