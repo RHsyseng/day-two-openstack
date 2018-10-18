@@ -2,15 +2,15 @@
 - name: Backing up the database via the Cinder service
   hosts: db
   tasks:
-#  - name: Delete existing Cinder Backup
-#    shell: "openstack volume backup delete dbvol_backup"
-#    ignore_errors: true
-#    delegate_to: localhost
   - name: Check for an existing backup
-    command: openstack volume backup list -c Name -f value
+    command: "openstack volume backup list -c Name -f value"
     register: backup_list
     delegate_to: localhost
-  - fail:
+  - debug: var=backup_list
+  - name: Delete the existing cinder backup
+    command: "openstack volume backup delete dbvol_backup"
+    when: backup_list.stdout is search("dbvol_backup")
+    delegate_to: localhost
   - name: Stop the database
     systemd:
       name: mongod
@@ -20,8 +20,11 @@
     command: "openstack volume backup create --force --name dbvol_backup dbvol"
     delegate_to: localhost
   - name: Wait for backup to complete and then run the openstack volume backup list command
-    shell: "sleep 45 && openstack volume backup list"
+    command: "openstack volume backup list"
     register: output
+    until: output.stdout is search("available")
+    retries: 20
+    delay: 5
     delegate_to: localhost
   - name: Start the database
     systemd:

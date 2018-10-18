@@ -1,0 +1,30 @@
+---
+osp_userpubkey: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+osp_admin_net:
+  name: 'public'
+  type: 'flat'
+  provider: 'public'
+osp_admin_subnet:
+  name: 'public-subnet'
+  cidr: '172.24.4.0/24'
+  gateway: '172.24.4.1'
+  dhcp_start: '172.24.4.2'
+  dhcp_end: '172.24.4.254'
+osp_priv:
+  net_name: 'private'
+  subnet_name: 'private-subnet'
+  cidr: '10.0.0.0/26'
+  dns:
+    - 10.19.143.247
+  router_name: 'router1'
+  security_group: 'private_secgroup'
+glance_image:
+  name: 'centos7-x86_64'
+  file: '/opt/stack/images/CentOS-7-x86_64-GenericCloud-1808.qcow2'
+  disk: 'qcow2'
+nova_flavor:
+  name: 'm1.small'
+  ram: '2048'
+  vcpus: '1'
+  disk: '20'
+  ephemeral: '0'
