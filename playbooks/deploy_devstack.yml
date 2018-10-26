@@ -1,0 +1,141 @@
+---
+- name: install and configure CNV
+  hosts: devstack
+  remote_user: root
+  vars:
+    openstack_repos:
+    - git://git.openstack.org/openstack/cinder.git
+    - https://git.openstack.org/openstack-dev/devstack
+    - git://git.openstack.org/openstack/glance.git
+    - git://git.openstack.org/openstack/keystone.git
+    - git://git.openstack.org/openstack/neutron.git
+    - https://git.openstack.org/openstack/neutron-lbaas
+    - git://git.openstack.org/openstack/nova.git
+    - https://git.openstack.org/openstack/octavia
+    - git://git.openstack.org/openstack/requirements.git
+    - git://git.openstack.org/openstack/swift.git
+  tasks:
+  - name: create stack user
+    user:
+      name: stack
+      shell: /bin/bash
+      password: $6$rounds=656000$47cizb4beOY.uB9c$wTlFCrP62g/M0.UNl0IHLOOw.fuWvJwCQLLS8UeruI1T/tbAdKd8Wzhsy7SandrOtROwBn7FBZHTaZcZciXMd/
+      generate_ssh_key: yes
+      ssh_key_bits: 2048
+      ssh_key_file: .ssh/id_rsa
+      home: /opt/stack
+  - name: give sudo access to stack user
+    copy:
+      dest: /etc/sudoers.d/stack
+      content: 'stack ALL=(ALL) NOPASSWD: ALL'
+      mode: 0440
+  - name: install epel
+    package:
+      name: epel-release
+      state: installed
+  - name: install packages
+    package:
+      name: ['git', 'ansible', 'python-pip', 'policycoreutils-python']
+      state: installed
+  - name: clone lab repo
+    git:
+      repo: git@github.com:RHsyseng/day-two-openstack.git
+      dest: /opt/stack/day-two-openstack
+    become: true
+    become_user: stack
+  - name: clone openstack repos
+    git:
+      repo: '{{ item }}'
+      dest: '/opt/stack/{{ item.split("/")[-1].split(".")[0] }}'
+    with_items: '{{ openstack_repos }}'
+    become: true
+    become_user: stack
+  - name: update pip
+    command: pip install --upgrade pip
+  - name: update setuptools
+    command: pip install --upgrade setuptools
+  - name: copy localrc config file
+    copy:
+      dest: /opt/stack/devstack/local.conf
+      content: |
+        [[local|localrc]]
+        # Load the external LBaaS plugin.
+        enable_plugin neutron-lbaas https://git.openstack.org/openstack/neutron-lbaas
+        enable_plugin octavia https://git.openstack.org/openstack/octavia
+        DATABASE_PASSWORD=password
+        ADMIN_PASSWORD=password
+        SERVICE_PASSWORD=password
+        RABBIT_PASSWORD=password
+        # Enable Logging
+        LOGFILE=$DEST/logs/stack.sh.log
+        VERBOSE=True
+        LOG_COLOR=True
+        # Pre-requisite
+        ENABLED_SERVICES=rabbit,mysql,key
+        # Nova
+        ENABLED_SERVICES+=,n-api,n-cpu,n-cond,n-sch,n-api-meta
+        # Glance
+        ENABLED_SERVICES+=,g-api,g-reg
+        # Neutron
+        ENABLE_ISOLATED_METADATA=True
+        ENABLED_SERVICES+=,q-svc,q-agt,q-dhcp,q-l3,q-meta
+        # Enable LBaaS v2
+        OCTAVIA_AMP_BASE_OS=centos
+        OCTAVIA_AMP_IMAGE_SIZE=30
+        ENABLED_SERVICES+=,q-lbaasv2
+        ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
+        # Swift
+        SWIFT_HASH=66a3d6b56c1f479c8b4e70ab5c2000f5
+        SWIFT_REPLICAS=1
+        SWIFT_DATA_DIR=$DEST/data
+        ENABLED_SERVICES+=,s-proxy,s-object,s-container,s-account
+        # Cinder
+        ENABLED_SERVICES+=,c-api,c-vol,c-sch,c-bak
+        enable_service placement-api
+    become: true
+    become_user: stack
+  - name: deploy devstack
+    shell: /opt/stack/devstack/stack.sh
+    args:
+      chdir: /opt/stack/devstack
+      creates: /opt/stack/devstack/.stackenv
+    become: true
+    become_user: stack
+  - name: shutdown iptables because I dont know
+    shell: iptables -F
+  - name: get lax on keys
+    copy:
+      dest: /opt/stack/.ssh/config
+      content: |
+        StrictHostKeyChecking=no
+        UserKnownHostsFile=/dev/null
+      mode: '0600'
+    become: true
+    become_user: stack
+  - name: add devstack sourcing to bashrc
+    lineinfile:
+      path: /opt/stack/.bashrc
+      line: 'source /opt/stack/devstack/openrc demo'
+    become: true
+    become_user: stack
+  - name: download glance image
+    get_url:
+      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
+    become: true
+    become_user: stack
+  - name: create lab deploy script
+    copy:
+      dest: /opt/stack/deploy_lab.sh
+      content: |
+        #/bin/bash
+        cd ~/day-two-openstack
+        ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml
+        ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
+        ansible-playbook webapp/deploy.yml
+    become: true
+    become_user: stack
+  - name: run lab deploy script
+    shell: sh /opt/stack/deploy_lab.sh
+    become: true
+    become_user: stack

@@ -1,4 +1,10 @@
 ---
+- name: allow for small files with mongo
+  copy:
+    dest: /etc/sysconfig/mongod
+    content: |
+      OPTIONS="--quiet -f /etc/mongod.conf --smallfiles"
+  become: true
 - name: copy conf file
   copy:
     src: mongod.conf
@@ -6,12 +12,7 @@
   become: true
   notify:
   - restart mongod
-- name: start and enable mongod
-  service:
-    name: mongod
-    state: restarted
-    enabled: true
-  become: true
+- meta: flush_handlers
 - name: copy mongo user add script
   copy:
     content: |
@@ -36,28 +37,3 @@
 - name: restore backup
   command: mongorestore '/srv/db-backup/glog'
   become: true
-
-#  shell: echo db.createUser({user: "glog",pwd: "gl0g",roles: [ "readWrite", "dbAdmin"]}) | mongo glog
-#  mongodb_user:
-#    database: 'glog'
-#    name: 'glog'
-#    password: 'gl0g'
-#    state: present
-
-#- name: firewall rules for mongo
-#  firewalld:
-#    port: 27017/tcp
-#    permanent: true
-#    state: enabled
-#  notify:
-#  - reload firewalld
-#  become: true
-
-#- name: restore backup database
-#  command: scl enable rh-mongodb32 'mongorestore -d glog {{ glog_mnt }}/backup/glog'
-#  become: true
-#  when:
-#  - restore|default('false') == 'true'
-#  tags:
-#  - dbrestore
-

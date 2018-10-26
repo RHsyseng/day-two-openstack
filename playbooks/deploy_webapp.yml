@@ -3,6 +3,10 @@
   hosts: localhost
   gather_facts: false
   tasks:
+  - name: download glance image
+    get_url:
+      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+      dest: '{{ glance_image.file }}'
   - name: create user keypair
     os_keypair:
       state: present
@@ -72,10 +76,7 @@
         yum -y install httpd
         systemctl enable httpd
         systemctl start httpd
-        rm /var/www/html/index.html
-        echo "hello from $(hostname)" > /var/www/html/index.html.production
-        echo "database is currently down for maintenace" > /var/www/html/index.html.maintenance
-        ln -s /var/www/html/index.html.production /var/www/html/index.html
+        echo "hello from $(hostname)" > /var/www/html/index.html
         {% endraw %}
     register: web_server
     with_sequence: start=0 end=1
@@ -119,14 +120,14 @@
         echo making and mounting mount point
         mkdir -p /var/lib/mongodb
         mount -a
-        echo installing required packages
-        yum -y install epel-release
-        yum -y install mongodb-server mongodb
-        sed -i 's/"$/ --smallfiles"/g' /etc/sysconfig/mongod
-        echo starting and enabling mongodb
-        systemctl enable mongod
-        systemctl start mongod
         {% endraw %}
+#        echo installing required packages
+#        yum -y install epel-release
+#        yum -y install mongodb-server mongodb
+#        sed -i 's/"$/ --smallfiles"/g' /etc/sysconfig/mongod
+#        echo starting and enabling mongodb
+#        systemctl enable mongod
+#        systemctl start mongod
       volumes:
       - dbvol
     register: db_server
