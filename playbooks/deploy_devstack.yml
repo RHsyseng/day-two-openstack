@@ -4,8 +4,8 @@
   remote_user: root
   vars:
     openstack_repos:
-    - git://git.openstack.org/openstack/cinder.git
     - https://git.openstack.org/openstack-dev/devstack
+    - git://git.openstack.org/openstack/cinder.git
     - git://git.openstack.org/openstack/glance.git
     - git://git.openstack.org/openstack/keystone.git
     - git://git.openstack.org/openstack/neutron.git
@@ -15,6 +15,11 @@
     - git://git.openstack.org/openstack/requirements.git
     - git://git.openstack.org/openstack/swift.git
   tasks:
+  - name: stop firewalld
+    systemd:
+      name: firewalld
+      state: stopped
+      enabled: false
   - name: create stack user
     user:
       name: stack
@@ -35,11 +40,11 @@
       state: installed
   - name: install packages
     package:
-      name: ['git', 'ansible', 'python-pip', 'policycoreutils-python']
+      name: ['git', 'ansible', 'python-pip', 'policycoreutils-python', 'screen']
       state: installed
   - name: clone lab repo
     git:
-      repo: git@github.com:RHsyseng/day-two-openstack.git
+      repo: https://github.com/RHsyseng/day-two-openstack.git
       dest: /opt/stack/day-two-openstack
     become: true
     become_user: stack
@@ -47,6 +52,8 @@
     git:
       repo: '{{ item }}'
       dest: '/opt/stack/{{ item.split("/")[-1].split(".")[0] }}'
+      force: yes
+      version: 'stable/rocky'
     with_items: '{{ openstack_repos }}'
     become: true
     become_user: stack
@@ -54,6 +61,26 @@
     command: pip install --upgrade pip
   - name: update setuptools
     command: pip install --upgrade setuptools
+  - name: download centos image
+    get_url:
+      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
+    become: true
+  - name: get lax on keys
+    copy:
+      dest: /opt/stack/.ssh/config
+      content: |
+        StrictHostKeyChecking=no
+        UserKnownHostsFile=/dev/null
+      mode: '0600'
+    become: true
+    become_user: stack
+  - name: add devstack sourcing to bashrc
+    lineinfile:
+      path: /opt/stack/.bashrc
+      line: 'source /opt/stack/devstack/openrc demo'
+    become: true
+    become_user: stack
   - name: copy localrc config file
     copy:
       dest: /opt/stack/devstack/local.conf
@@ -101,41 +128,21 @@
       creates: /opt/stack/devstack/.stackenv
     become: true
     become_user: stack
-  - name: shutdown iptables because I dont know
-    shell: iptables -F
-  - name: get lax on keys
-    copy:
-      dest: /opt/stack/.ssh/config
-      content: |
-        StrictHostKeyChecking=no
-        UserKnownHostsFile=/dev/null
-      mode: '0600'
-    become: true
-    become_user: stack
-  - name: add devstack sourcing to bashrc
-    lineinfile:
-      path: /opt/stack/.bashrc
-      line: 'source /opt/stack/devstack/openrc demo'
-    become: true
-    become_user: stack
-  - name: download glance image
-    get_url:
-      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
-      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
-    become: true
-    become_user: stack
   - name: create lab deploy script
     copy:
       dest: /opt/stack/deploy_lab.sh
       content: |
         #/bin/bash
+        source /opt/stack/devstack/openrc demo
         cd ~/day-two-openstack
-        ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml
-        ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
+        ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
+        ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml && \
         ansible-playbook webapp/deploy.yml
     become: true
     become_user: stack
+  - name: shutdown iptables because I dont know why
+    shell: iptables -F
   - name: run lab deploy script
-    shell: sh /opt/stack/deploy_lab.sh
+    shell: bash /opt/stack/deploy_lab.sh
     become: true
     become_user: stack

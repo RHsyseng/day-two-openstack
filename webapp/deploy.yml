@@ -1,4 +1,13 @@
 ---
+- name: wait for nodes to come up
+  hosts: db, web
+  gather_facts: false
+  tasks:
+  - name: wait for node to be reachable
+    wait_for_connection:
+      delay: 10
+      timeout: 600
+
 - name: common tasks for all hosts
   hosts: db, web
   tasks:

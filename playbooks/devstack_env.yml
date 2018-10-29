@@ -23,8 +23,8 @@ glance_image:
   file: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
   disk: 'qcow2'
 nova_flavor:
-  name: 'm1.small'
-  ram: '2048'
+  name: 'd2'
+  ram: 'cw10242048'
   vcpus: '1'
-  disk: '20'
+  disk: '10'
   ephemeral: '0'
