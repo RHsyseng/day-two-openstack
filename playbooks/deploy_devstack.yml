@@ -138,11 +138,23 @@
         ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
         ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml && \
         ansible-playbook webapp/deploy.yml
+          if [[ x$1 == x"test" ]]; then
+            ansible-playbook playbooks/cinder_backup_final.yml && \
+            ansible-playbook playbooks/cinder_restore_using_include.yml && \
+            ansible-playbook playbooks/rolling_upgrade.yml
+            ## reset
+            ansible-playbook playbooks/delete_webapp.yml
+            ansible-playbook playbooks/delete_loadbalancer.yml -e @playbooks/devstack_env.yml
+            ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml
+            ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
+            ansible-playbook webapp/deploy.yml
+          fi
     become: true
     become_user: stack
   - name: shutdown iptables because I dont know why
     shell: iptables -F
   - name: run lab deploy script
-    shell: bash /opt/stack/deploy_lab.sh
+    shell: bash /opt/stack/deploy_lab.sh test
     become: true
+    mode: 0755
     become_user: stack

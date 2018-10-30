@@ -11,6 +11,9 @@
     os_volume:
       display_name: dbvol
       state: absent
+  - name: 'delete the cinder volume backup'
+    command: openstack volume backup delete dbvol_backup
+    ignore_errors: true
   - name: 'UNDO: delete the web server'
     os_server:
       name: web{{ item }}
