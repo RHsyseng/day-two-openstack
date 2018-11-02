@@ -1,7 +1,6 @@
 ---
-- name: install and configure CNV
+- name: install and configure devstack
   hosts: devstack
-  remote_user: root
   vars:
     openstack_repos:
     - https://git.openstack.org/openstack-dev/devstack
@@ -14,12 +13,19 @@
     - https://git.openstack.org/openstack/octavia
     - git://git.openstack.org/openstack/requirements.git
     - git://git.openstack.org/openstack/swift.git
-  tasks:
-  - name: stop firewalld
+  handlers:
+  - name: restart sshd
     systemd:
-      name: firewalld
-      state: stopped
-      enabled: false
+      name: sshd
+      state: restarted
+    become: true
+  tasks:
+#  - name: stop firewalld
+#    systemd:
+#      name: firewalld
+#      state: stopped
+#      enabled: false
+#    become: true
   - name: create stack user
     user:
       name: stack
@@ -29,19 +35,31 @@
       ssh_key_bits: 2048
       ssh_key_file: .ssh/id_rsa
       home: /opt/stack
+    become: true
   - name: give sudo access to stack user
     copy:
       dest: /etc/sudoers.d/stack
       content: 'stack ALL=(ALL) NOPASSWD: ALL'
       mode: 0440
+    become: true
+  - name: allow ssh access with passwords
+    lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: '^PasswordAuthentication no'
+      line: 'PasswordAuthentication yes'
+    become: true
+    notify:
+    - restart sshd
   - name: install epel
     package:
       name: epel-release
       state: installed
+    become: true
   - name: install packages
     package:
       name: ['git', 'ansible', 'python-pip', 'policycoreutils-python', 'screen']
       state: installed
+    become: true
   - name: clone lab repo
     git:
       repo: https://github.com/RHsyseng/day-two-openstack.git
@@ -59,13 +77,21 @@
     become_user: stack
   - name: update pip
     command: pip install --upgrade pip
+    become: true
   - name: update setuptools
     command: pip install --upgrade setuptools
-  - name: download centos image
-    get_url:
-      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+    become: true
+#  - name: download centos image
+#    get_url:
+#      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+#      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
+#    become: true
+  - name: copy webdb image
+    copy:
+      src: '/srv/images/centos-7-x86_64_webdb.qcow2'
       dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
     become: true
+    become_user: stack
   - name: get lax on keys
     copy:
       dest: /opt/stack/.ssh/config
@@ -108,7 +134,7 @@
         ENABLED_SERVICES+=,q-svc,q-agt,q-dhcp,q-l3,q-meta
         # Enable LBaaS v2
         OCTAVIA_AMP_BASE_OS=centos
-        OCTAVIA_AMP_IMAGE_SIZE=30
+        OCTAVIA_AMP_IMAGE_SIZE=10
         ENABLED_SERVICES+=,q-lbaasv2
         ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
         # Swift
@@ -121,13 +147,6 @@
         enable_service placement-api
     become: true
     become_user: stack
-  - name: deploy devstack
-    shell: /opt/stack/devstack/stack.sh
-    args:
-      chdir: /opt/stack/devstack
-      creates: /opt/stack/devstack/.stackenv
-    become: true
-    become_user: stack
   - name: create lab deploy script
     copy:
       dest: /opt/stack/deploy_lab.sh
@@ -136,25 +155,74 @@
         source /opt/stack/devstack/openrc demo
         cd ~/day-two-openstack
         ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
-        ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml && \
-        ansible-playbook webapp/deploy.yml
+        ansible-playbook webapp/deploy.yml && \
+        ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
           if [[ x$1 == x"test" ]]; then
             ansible-playbook playbooks/cinder_backup_final.yml && \
             ansible-playbook playbooks/cinder_restore_using_include.yml && \
             ansible-playbook playbooks/rolling_upgrade.yml
             ## reset
-            ansible-playbook playbooks/delete_webapp.yml
-            ansible-playbook playbooks/delete_loadbalancer.yml -e @playbooks/devstack_env.yml
-            ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml
+            ansible-playbook playbooks/delete_webapp.yml && \
+            ansible-playbook playbooks/delete_loadbalancer.yml -e @playbooks/devstack_env.yml && \
+            ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
+            ansible-playbook webapp/deploy.yml && \
             ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
-            ansible-playbook webapp/deploy.yml
           fi
+      mode: 0755
     become: true
     become_user: stack
+  - name: create first boot script
+    copy:
+      dest: /first-boot.sh
+      content: |
+        #!/bin/bash
+        cd /opt/stack/devstack
+        /opt/stack/devstack/stack.sh
+        iptables -F
+        /opt/stack/deploy_lab.sh
+      mode: 0755
+    become: true
+  - name: deploy devstack
+    shell: /opt/stack/devstack/stack.sh
+    args:
+      chdir: /opt/stack/devstack
+      creates: /opt/stack/devstack/.stackenv
+    become: true
+    become_user: stack
+    tags:
+    - deploy
   - name: shutdown iptables because I dont know why
     shell: iptables -F
-  - name: run lab deploy script
-    shell: bash /opt/stack/deploy_lab.sh test
     become: true
-    mode: 0755
+    tags:
+    - deploy
+  - name: chunk big files in glance
+    lineinfile:
+      path: '/etc/glance/glance-api.conf'
+      line: 'swift_store_large_object_size = 500'
+      insertafter: 'swift_store_config_file = /etc/glance/glance-swift-store.conf'
+    become: true
+    tags:
+    - deploy
+  - name: set file to be default glance store
+    lineinfile:
+      path: '/etc/glance/glance-api.conf'
+      regexp: 'default_store = swift'
+      line: 'default_store = file'
+    become: true
+    tags:
+    - deploy
+  - name: restart glance-api
+    systemd:
+      name: 'devstack@g-api.service'
+      state: restarted
+    become: true
+    tags:
+    - deploy
+  - name: run lab deploy script
+    shell: /opt/stack/deploy_lab.sh
+    become: true
     become_user: stack
+    tags:
+    - deploy
+    - lab_deploy

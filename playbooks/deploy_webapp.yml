@@ -120,14 +120,9 @@
         echo making and mounting mount point
         mkdir -p /var/lib/mongodb
         mount -a
+        chown -R mongodb:mongodb /var/lib/mongodb
+        restorecon -Rv /var/lib/mongodb
         {% endraw %}
-#        echo installing required packages
-#        yum -y install epel-release
-#        yum -y install mongodb-server mongodb
-#        sed -i 's/"$/ --smallfiles"/g' /etc/sysconfig/mongod
-#        echo starting and enabling mongodb
-#        systemctl enable mongod
-#        systemctl start mongod
       volumes:
       - dbvol
     register: db_server
