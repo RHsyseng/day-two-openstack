@@ -81,11 +81,6 @@
   - name: update setuptools
     command: pip install --upgrade setuptools
     become: true
-#  - name: download centos image
-#    get_url:
-#      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
-#      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
-#    become: true
   - name: copy webdb image
     copy:
       src: '/srv/images/centos-7-x86_64_webdb.qcow2'
@@ -177,9 +172,11 @@
       content: |
         #!/bin/bash
         cd /opt/stack/devstack
-        /opt/stack/devstack/stack.sh
+        su - stack -c /opt/stack/devstack/stack.sh
+        sed -i 's/default_store = swift/default_store = file/g' /etc/glance/glance-api.conf
+        systemctl restart devstack@g-api.service
         iptables -F
-        /opt/stack/deploy_lab.sh
+        su - stack -c /opt/stack/deploy_lab.sh
       mode: 0755
     become: true
   - name: deploy devstack
