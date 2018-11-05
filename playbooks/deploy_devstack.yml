@@ -87,6 +87,12 @@
       dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
     become: true
     become_user: stack
+  - name: copy octavia image
+    copy:
+      src: '/srv/images/amphora-x64-haproxy.qcow2'
+      dest: '/opt/stack/diskimage-create/amphora-x64-haproxy.qcow2'
+    become: true
+    become_user: stack
   - name: get lax on keys
     copy:
       dest: /opt/stack/.ssh/config
@@ -130,6 +136,7 @@
         # Enable LBaaS v2
         OCTAVIA_AMP_BASE_OS=centos
         OCTAVIA_AMP_IMAGE_SIZE=10
+        DISABLE_AMP_IMAGE_BUILD=True
         ENABLED_SERVICES+=,q-lbaasv2
         ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
         # Swift
