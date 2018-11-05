@@ -83,14 +83,14 @@
     become: true
   - name: copy webdb image
     copy:
-      src: '/srv/images/centos-7-x86_64_webdb.qcow2'
+      src: 'centos-7-x86_64-webdb.qcow2'
       dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
     become: true
     become_user: stack
   - name: copy octavia image
     copy:
       src: '/srv/images/amphora-x64-haproxy.qcow2'
-      dest: '/opt/stack/diskimage-create/amphora-x64-haproxy.qcow2'
+      dest: '/opt/stack/octavia/diskimage-create/amphora-x64-haproxy.qcow2'
     become: true
     become_user: stack
   - name: get lax on keys
