@@ -20,7 +20,7 @@ osp_priv:
   security_group: 'private_secgroup'
 glance_image:
   name: 'centos7-x86_64'
-  file: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
+  file: '/opt/stack/centos-7-x86_64-webdb.qcow2'
   disk: 'qcow2'
 nova_flavor:
   name: 'd2'

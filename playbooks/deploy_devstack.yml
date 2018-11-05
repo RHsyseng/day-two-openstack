@@ -83,8 +83,8 @@
     become: true
   - name: copy webdb image
     copy:
-      src: 'centos-7-x86_64-webdb.qcow2'
-      dest: '/opt/stack/CentOS-7-x86_64-GenericCloud.qcow2'
+      src: '/src/images/centos-7-x86_64-webdb.qcow2'
+      dest: '/opt/stack/centos-7-x86_64-webdb.qcow2'
     become: true
     become_user: stack
   - name: copy octavia image

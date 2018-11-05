@@ -3,10 +3,10 @@
   hosts: localhost
   gather_facts: false
   tasks:
-  - name: download glance image
-    get_url:
-      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
-      dest: '{{ glance_image.file }}'
+#  - name: download glance image
+#    get_url:
+#      url: https://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+#      dest: '{{ glance_image.file }}'
   - name: create user keypair
     os_keypair:
       state: present
