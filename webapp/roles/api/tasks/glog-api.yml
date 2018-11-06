@@ -7,40 +7,31 @@
 #  tags:
 #  - pip
 
--   name: allow http to listen on app port
-    seport:
-        ports: '{{ item }}'
-        proto: tcp
-        setype: http_port_t
-        state: present
-    become: true
-    tags:
-    - selinux
-    with_items:
-    - '{{ api_port }}'
+- name: allow http to listen on app port
+  seport:
+    ports: '{{ item }}'
+    proto: tcp
+    setype: http_port_t
+    state: present
+  become: true
+  tags:
+  - selinux
+  with_items:
+  - '{{ api_port }}'
 
--   name: allow httpd to net connect
-    seboolean:
-        name: httpd_can_network_connect
-        state: yes
-        persistent: yes
-    become: true
-    tags:
-    - selinux
+- name: allow httpd to net connect
+  seboolean:
+    name: httpd_can_network_connect
+    state: yes
+    persistent: yes
+  become: true
+  tags:
+  - selinux
 
-#-   name: firewall rules for api
-#    firewalld:
-#        port: '{{ api_port }}/tcp'
-#        permanent: true
-#        state: enabled
-#    notify:
-#    - reload firewalld
-#    become: true
-
--   name: copy wsgi config files
-    template:
-        src: glog_api.conf.j2
-        dest: /etc/httpd/conf.d/glog_api.conf
-    become: true
-    notify:
-    - restart httpd
+- name: copy wsgi config files
+  template:
+    src: glog_api.conf.j2
+    dest: /etc/httpd/conf.d/glog_api.conf
+  become: true
+  notify:
+  - restart httpd

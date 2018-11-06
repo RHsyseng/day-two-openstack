@@ -83,7 +83,7 @@
     become: true
   - name: copy webdb image
     copy:
-      src: '/src/images/centos-7-x86_64-webdb.qcow2'
+      src: '/srv/images/centos-7-x86_64-webdb.qcow2'
       dest: '/opt/stack/centos-7-x86_64-webdb.qcow2'
     become: true
     become_user: stack
@@ -136,7 +136,7 @@
         # Enable LBaaS v2
         OCTAVIA_AMP_BASE_OS=centos
         OCTAVIA_AMP_IMAGE_SIZE=10
-        DISABLE_AMP_IMAGE_BUILD=True
+        #DISABLE_AMP_IMAGE_BUILD=True
         ENABLED_SERVICES+=,q-lbaasv2
         ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
         # Swift
@@ -178,6 +178,7 @@
       dest: /first-boot.sh
       content: |
         #!/bin/bash
+        set -e
         cd /opt/stack/devstack
         su - stack -c /opt/stack/devstack/stack.sh
         sed -i 's/default_store = swift/default_store = file/g' /etc/glance/glance-api.conf

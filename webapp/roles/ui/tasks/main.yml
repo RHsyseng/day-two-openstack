@@ -2,7 +2,7 @@
 #- include_tasks: rhn.yml
 #  tags:
 #  - rhn
-#- include_tasks: git.yml
+- include_tasks: git.yml
 - include_tasks: glog-ui.yml
   tags:
   - glog-ui
