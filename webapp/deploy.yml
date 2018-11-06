@@ -6,7 +6,7 @@
   - name: wait for node to be reachable
     wait_for_connection:
       delay: 10
-      timeout: 600
+      timeout: 1200
 
 ## moved tim image due to time
 #- name: common tasks for all hosts
