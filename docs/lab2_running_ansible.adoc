@@ -280,13 +280,13 @@ directory.
 . Change into the _openstack-ansible_ directory.
 +
 ----
-$ cd ~/openstack-ansible
+$ cd $HOME/openstack-ansible
 ----
 +
 . Create an `ansible.cfg` file with the following settings.
 +
 ----
-$ vi ~/openstack-ansible/ansible.cfg
+$ vi $HOME/openstack-ansible/ansible.cfg
 ----
 +
 .Contents of ansible.cfg
