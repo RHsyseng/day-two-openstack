@@ -378,7 +378,7 @@ $ openstack loadbalancer list
 
 [.text-center]
 .Database Graphs
-image::images/Selection_246.png[width=100%]
+image::../images/Selection_246.png[width=100%]
 
 {nbsp}
 
