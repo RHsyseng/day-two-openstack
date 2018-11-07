@@ -1,0 +1,370 @@
+= Lab 2: Configuring and Running Ansible
+
+In lab two, we focus on creating static inventory files, discuss using
+dynamic inventory files, configuring the `ansible.cfg` file, and running
+Ansible ad-hoc commands against our OpenStack
+instances.
+
+== Static Inventory File
+
+An inventory file is a text file that specifies the nodes that will be managed
+by the control machine. The nodes to be managed may include a list of hostnames
+or IP addresses of those nodes. The inventory file allows for nodes to be
+organized into groups by declaring a host group name within square brackets ([]).
+
+Below is an example of an inventory file that creates two host groups:
+_production_ and _development_. Each host group contains node hostnames and/or
+IPs of nodes that are to be managed by that particular host group.
+
+----
+[production]
+prod1.example.com
+prod2.example.com
+prod3.example.com
+10.19.1.200
+
+[development]
+dev1.example.com
+dev2.example.com
+dev3.example.com
+10.19.0.100
+----
+
+It is considered best practice to group managed nodes in host groups for better
+organization. If there is a long list of nodes to be managed that have predictable
+names such as _prodX.example.com_ where X is the node number, these nodes
+can be declared using Python _list_ syntax. For example, the above inventory file
+can be simplified as follows:
+
+----
+[production]
+prod[1:3].example.com
+10.19.1.200
+
+[development]
+dev[1:3].example.com
+10.19.0.100
+----
+
+The value _[1:3]_ tells the Ansible file that there are multiple nodes starting
+with 1 and ending with 3.
+
+
+Aside from being able to create host groups that contain nodes, and specifying
+ranges, a host group can also be a collection of other host groups using the
+**:children** suffix. For example, review the following inventory file:
+
+----
+[france]
+paris.example.com
+nice.example.com
+
+[germany]
+berlin.example.com
+frankfurt.example.com
+
+[eu:children]
+france
+germany
+----
+
+In the example above, the host group _eu_ inherits the managed nodes within
+the _france_ host group and the _germany_ host group.
+
+== Dynamic Inventories
+
+While the use of static inventory files is easy to write and use with small
+infrastructures, there are times when being able to dynamically generate an inventory
+with the proper hosts is advantageous. For example, within environments
+where you have a very large number of machines you need to manage or an
+environment where the creation and deletion of machines happens very often.
+
+How do you use dynamic inventories?
+
+Ansible supports the use of scripts that
+are able to collect information from an existing environment, such as OpenStack,
+which it can then execute to create an inventory based on the information it
+collects in real time. The output of these scripts is an inventory in JSON
+format.
+
+Dynamic inventory files are used just like static inventory files and are passed
+using either the _-i_ option on the command line or can be specified within your
+ansible.cfg file as shown in the exercise below.
+
+How do I create a dynamic inventory script?
+
+Luckily, Ansible provides a lot of different dynamic inventory scripts for
+different providers on their website including Amazon AWS, OpenStack, Cobbler,
+etc. For the purposes of this lab, we will be using a custom OpenStack
+dynamic inventory script for our upcoming guided exercise.
+
+=== Guided Exercises: Downloading the Dynamic OpenStack Inventory File
+
+First we need to download the dynamic inventory and place it in a directory
+named _openstack-ansible_.
+
+. Within your OVH instance, create a directory labeled _openstack-ansible_ under the
+home directory.
++
+----
+$ mkdir $HOME/openstack-ansible
+----
++
+. Change into the _openstack-ansible_ directory.
++
+----
+$ cd $HOME/openstack-ansible
+----
++
+. Using the `wget` command, download the _openstack_inventory.py_ dynamic inventory
+file and change the permissions of the python script to be executable.
++
+----
+$ wget https://raw.githubusercontent.com/RHsyseng/day-two-openstack/master/openstack_inventory.py
+chmod +x openstack_inventory.py
+----
+
+NOTE: Do not name the file _openstack.py_ as this will conflict with imports from
+`openstacksdk`.
+
+If you are interested in creating your own dynamic inventory scripts visit https://docs.ansible.com/ansible/latest/dev_guide/developing_inventory.html[Developing Inventory Sources]
+
+== YAML Configuration File
+
+In order to use the OpenStack cloud modules from Ansible, a special YAML file
+is required within the _/etc/openstack/_ directory called _clouds.yml_. This file includes all the
+information provided within your _openrc_ file that
+was created once the `devstack` installation completed. An example of the file
+is shown below. Notice how there are two clouds which represent three different
+types of access. _devstack_ and _devstack-alt_ represents demo environments and _devstack-admin_ represents our
+administrative cloud access.
+
+
+=== Guided Exercise: Confirmation of the YAML Configuration File
+
+. Within your OVH instance, confirm that  a directory labeled _openstack_ under the
+_etc_ directory exists:
++
+----
+$ ls /etc/openstack
+----
++
+. `cat` the _clouds.yml_ file to note the access credentials to your OpenStack cloud:
++
+----
+clouds:
+  devstack:
+    auth:
+      auth_url: http://10.19.136.71/identity
+      password: password
+      project_domain_id: default
+      project_name: demo
+      user_domain_id: default
+      username: demo
+    identity_api_version: '3'
+    region_name: RegionOne
+    volume_api_version: '2'
+  devstack-admin:
+    auth:
+      auth_url: http://10.19.136.71/identity
+      password: password
+      project_domain_id: default
+      project_name: admin
+      user_domain_id: default
+      username: admin
+    identity_api_version: '3'
+    region_name: RegionOne
+    volume_api_version: '2'
+  devstack-alt:
+    auth:
+      auth_url: http://10.19.136.71/identity
+      password: password
+      project_domain_id: default
+      project_name: alt_demo
+      user_domain_id: default
+      username: alt_demo
+    identity_api_version: '3'
+    region_name: RegionOne
+    volume_api_version: '2'
+
+----
+
+Confirm that the credentials are working by invoking the _openstack_inventory_ script,
+which reads the file to access the cloud:
+
+----
+$ cd $HOME/openstack-ansible
+$ ./openstack_inventory.py --list
+{
+  "RegionOne": [
+    "716c0379-f46b-42c8-87fd-d4810371358a",
+    "e78a2202-ab58-49ae-9235-7c7c192bf605",
+    "70eb276d-124f-4d77-8aeb-8cdecc1846e8",
+    "a2dd41e0-54ee-4df6-b7f6-7fd510a7e4f1"
+  ],
+  "RegionOne_nova": [
+    "716c0379-f46b-42c8-87fd-d4810371358a",
+    "e78a2202-ab58-49ae-9235-7c7c192bf605",
+    "70eb276d-124f-4d77-8aeb-8cdecc1846e8",
+    "a2dd41e0-54ee-4df6-b7f6-7fd510a7e4f1"
+  ],
+  "_meta": {
+    "hostvars": {
+      "70eb276d-124f-4d77-8aeb-8cdecc1846e8": {
+        "ansible_host": "172.24.4.18",
+        "ansible_ssh_host": "172.24.4.18",
+        "openstack": {
+          "OS-DCF:diskConfig": "MANUAL",
+          "OS-EXT-AZ:availability_zone": "nova",
+          "OS-EXT-STS:power_state": 1,
+          "OS-EXT-STS:task_state": null,
+          "OS-EXT-STS:vm_state": "active",
+          "OS-SRV-USG:launched_at": "2018-10-11T17:10:02.000000",
+          "OS-SRV-USG:terminated_at": null,
+          "accessIPv4": "172.24.4.18",
+          "accessIPv6": "fd9b:94e6:2060:0:f816:3eff:fe0b:a0ee",
+          "addresses": {
+            "private": [
+              {
+                "OS-EXT-IPS-MAC:mac_addr": "fa:16:3e:0b:a0:ee",
+                "OS-EXT-IPS:type": "fixed",
+                "addr": "fd9b:94e6:2060:0:f816:3eff:fe0b:a0ee",
+                "version": 6
+<...snip...>
+  "nova": [
+    "716c0379-f46b-42c8-87fd-d4810371358a",
+    "e78a2202-ab58-49ae-9235-7c7c192bf605",
+    "70eb276d-124f-4d77-8aeb-8cdecc1846e8",
+    "a2dd41e0-54ee-4df6-b7f6-7fd510a7e4f1"
+  ],
+  "web": [
+    "e78a2202-ab58-49ae-9235-7c7c192bf605",
+    "70eb276d-124f-4d77-8aeb-8cdecc1846e8"
+  ],
+  "web0": [
+    "e78a2202-ab58-49ae-9235-7c7c192bf605"
+  ],
+  "web1": [
+    "70eb276d-124f-4d77-8aeb-8cdecc1846e8"
+  ]
+}
+----
+
+== Ansible Configuration File
+
+The Ansible configuration file consists of multiple sections that are defined
+as key-value pairs. When Ansible is installed, it contains the default
+`ansible.cfg` file in the location `/etc/ansible/ansible.cfg`. It is recommended
+to open the `/etc/ansible/ansible.cfg` to view all the different options and
+settings that be can modified. For the purposes of this lab, our focus will be
+on the _[defaults]_ section.
+
+When dealing with the `ansible.cfg` file, it can be stored in multiple locations.
+The locations include:
+
+* _/etc/ansible/ansible.cfg_
+* _~/.ansible.cfg_
+* local directory from where you run Ansible commands.
+
+The location of the configuration file is important as it will dictate which
+`ansible.cfg` is used.
+
+It is best practice to store your `ansible.cfg` file in the same location as
+where the playbooks for this lab will be created.
+
+=== Guided Exercise: Create Ansible.cfg
+
+In this exercise, create a local `ansible.cfg` file within the _openstack-ansible_
+directory.
+
+. Change into the _openstack-ansible_ directory.
++
+----
+$ cd ~/openstack-ansible
+----
++
+. Create an `ansible.cfg` file with the following settings.
++
+----
+$ vi ~/openstack-ansible/ansible.cfg
+----
++
+.Contents of ansible.cfg
+----
+[defaults]
+remote_user = centos
+inventory = ./openstack_inventory.py
+----
+
+//TODO: Dcritch we need to figure the above out in how we want to handle.
+
+The OpenStack instance that has been created for you uses a user labeled
+`centos` that contains `sudo` privileges. The file above tells Ansible to use
+the user `centos` when attempting `ssh` connectivity and to use the dynamic inventory
+script for the IP address of our managed nodes.
+
+=== Guided Exercise: Verify Connectivity to our OpenStack Instance
+
+In order to ensure that our _openstack_inventory.py_ file and `ansible.cfg` file have been
+properly setup, we will use Ansible _ad hoc_ commands to execute a simple Ansible
+command to list our OpenStack instances.
+
+The first thing we want to do is ensure we are using the appropriate `ansible.cfg`
+file using the following command:
+
+[subs+=quotes]
+----
+$ ansible --version
+ansible 2.7.0
+  config file = /opt/stack/openstack-ansible/ansible.cfg
+  configured module search path = [u'/opt/stack/.ansible/plugins/modules', u'/usr/share/ansible/plugins/modules']
+  ansible python module location = /opt/stack/env/lib/python2.7/site-packages/ansible
+  executable location = /opt/stack/env/bin/ansible
+  python version = 2.7.5 (default, Jul 13 2018, 13:06:57) [GCC 4.8.5 20150623 (Red Hat 4.8.5-28)]
+----
+
+NOTE: Ensure that the _config file_ location points to the `ansible.cfg` located
+within our _openstack-ansible_ directory.
+
+Once the correct `ansible.cfg` being used as been identified, run the following
+Ansible ad hoc command to list the OpenStack instances in the web and db groups:
+
+----
+$ ansible web,db --list-hosts
+  hosts (3):
+    e78a2202-ab58-49ae-9235-7c7c192bf605
+    70eb276d-124f-4d77-8aeb-8cdecc1846e8
+    716c0379-f46b-42c8-87fd-d4810371358a
+----
+
+----
+$ ansible web,db -m ping
+70eb276d-124f-4d77-8aeb-8cdecc1846e8 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+e78a2202-ab58-49ae-9235-7c7c192bf605 | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+716c0379-f46b-42c8-87fd-d4810371358a | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+----
+
+
+The `ansible web,db -m ping` attempts to `ping` the OpenStack instance and will send
+output whether or not it was successful. Expected output if their is a ping
+failure is similar to:
+
+----
+716c0379-f46b-42c8-87fd-d4810371358a | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to connect to the host via ssh: Warning: Permanently added '172.24.4.2' (ECDSA) to the list of known hosts.\r\nPermission denied (publickey,gssapi-keyex,gssapi-with-mic).\r\n",
+    "unreachable": true
+}
+----
+
+The above error points indicates "permission denied" which in this case means
+the proper user (centos) was not specified in your ansible.cfg file.
