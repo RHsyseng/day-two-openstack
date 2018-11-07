@@ -1,0 +1,138 @@
+toc::[]
+= Overview of the Lab
+
+== Abstract
+
+_Managing an application on OpenStack presents a host of challenges for the
+system administrator, and finding ways to reduce complexity and produce
+consistency are key ingredients to achieving success. With the use of Ansible,
+an agentless IT automation technology, a system administrator can create
+Ansible Playbooks that provide the needed consistency and reduced complexity._
+
+_This lab will provide system administrators with a real-world scenario of
+backing up and restoring a web application with a backend database.
+Administrators can expect to be guided with a step-by-step methodology to
+implement these Ansible Playbooks to achieve consistency and reproducibility
+of the day-two operations of backing up and restoring a simple application with
+a backend database on OpenStack._
+
+_Lab prerequisites:_
+
+* _A laptop with an SSH client and a modern web browser._
+* _Understanding of Ansible fundamentals would be a plus._
+
+
+== Environment Overview
+
+This lab will provide a step-by-step on using several http://docs.ansible.com/ansible/latest/modules/list_of_cloud_modules.html#openstack[Ansible OpenStack modules]
+to backup and restore a backend database.
+The lab environment consists of a virtual machine running on
+https://www.ovh.com/world/public-cloud/instances/[OVH public cloud
+instances] and the use the student's laptop to `ssh` into the OVH
+cloud instance.
+
+Each student's OVH public cloud instance consists of an
+OpenStack https://docs.openstack.org/devstack/latest/[devstack] installation
+using https://www.centos.org/[CentOS] as the Linux distribution. Each instance
+ will contain a file  `/opt/stack/devstack/openrc` with all the credential
+information.
+
+== Lab Scope
+
+The lab exercises are intended to build a working Ansible playbook that can
+backup and restore a backend database. Each exercise will focus on a key element
+of the backup and/or restoration process and build upon the previous lab exercises.
+
+== Connectivity Details
+
+The labs require students to be able to access the OVH instance via an `ssh`
+session, via their workstation. Each student
+will have a specific `student_id` that is assigned by the instructor. This
+`student_id` is important as it is the name of your instance.
+
+*IMPORTANT: If you have not been assigned a `student_id` and
+associated IP address of the instance, please get a hold
+of an instructor.*
+
+The following tables provide specific details about the environment that is to
+be used.
+
+|====
+| *OpenStack Dashboard* | *OpenStack RC File Location* | *OpenStack User* | *Openstack Project*
+| https://<ip_of_instance>/dashboard | /opt/stack/devstack/openrc | demo | password
+|====
+
+The details of the instance including the name and IP address will be
+provided by the instructor during the lab.
+
+|====
+| *Name of Instance* | *IP Address* | *username*
+| <student_id> | <instructor_provided> | stack
+|====
+
+The student's public SSH key i.e. `id_rsa.pub` on their workstation will be
+required in order to SSH into the instance.
+
+For documentation in how to generate a SSH key, please visit http://docs.ovh.ca/en/guides-ssh-publiccloud.html[here].
+
+To copy your SSH key into the instance you could use the *ssh-copy-id* command
+in Linux/MacOS or manually into the appropriate directory structure. The root
+credentials for the instance are:
+
+|====
+| *Username* | *Password*
+| root | OpenStack+Berlin
+|====
+
+== Web Stack Details
+
+For the purposes of this lab, a small web stack has been created with 2 servers
+running a http://flask.pocoo.org/[flask] application, backed by a https://www.mongodb.com/[mongodb]
+database server.
+
+The IP of the instances can be determined with:
+----
+$ openstack server list
++--------------------------------------+------+--------+----------------------------------------------------------------------+----------------+----------+
+| ID                                   | Name | Status | Networks                                                             | Image          | Flavor   |
++--------------------------------------+------+--------+----------------------------------------------------------------------+----------------+----------+
+| 5db094a5-177d-4e78-90fa-2b9227504ac4 | db0  | ACTIVE | private=fd9b:94e6:2060:0:f816:3eff:fe76:3671, 10.0.0.19, 172.24.4.2  | centos7-x86_64 | m1.small |
+| a759a6a6-b72e-40a0-8941-951a4c51f3ef | web1 | ACTIVE | private=fd9b:94e6:2060:0:f816:3eff:fe8b:aa04, 10.0.0.8, 172.24.4.18  | centos7-x86_64 | m1.small |
+| d1703594-1459-48be-b6b4-7a48d0d7ed63 | web0 | ACTIVE | private=fd9b:94e6:2060:0:f816:3eff:fef8:5d4f, 10.0.0.17, 172.24.4.19 | centos7-x86_64 | m1.small |
++--------------------------------------+------+--------+----------------------------------------------------------------------+----------------+----------+
+----
+
+From your OVH instance, you should be able to curl the IPs of the webservers:
+----
+$ curl 172.24.4.18 2>&1 | grep 'served by'
+      served by: web1.novalocal
+$ curl 172.24.4.19 2>&1 | grep 'served by'
+      served by: web0.novalocal
+----
+
+An OpenStack loadbalancer has been placed in front of the instances. Use the openstack command to retrieve the details
+and access the IP:
+
+----
+$ openstack loadbalancer list
++--------------------------------------+-------+----------------------------------+-------------+---------------------+----------+
+| id                                   | name  | project_id                       | vip_address | provisioning_status | provider |
++--------------------------------------+-------+----------------------------------+-------------+---------------------+----------+
+| 800456ff-6b1a-40cd-a17b-ebed02f95160 | weblb | b0796a9f0938466b9e9771c01d5bd2ba | 172.24.4.11 | ACTIVE              | amphora  |
++--------------------------------------+-------+----------------------------------+-------------+---------------------+----------+
+$ curl 172.24.4.11 2>&1 | grep 'served by'
+      served by: web0.novalocal
+$ curl 172.24.4.11 2>&1 | grep 'served by'
+      served by: web1.novalocal
+$ curl 172.24.4.11 2>&1 | grep 'served by'
+      served by: web0.novalocal
+$ curl 172.24.4.11 2>&1 | grep 'served by'
+      served by: web1.novalocal
+----
+
+To access the web page in a GUI, ssh forwarding needs to be configured. If you are on a UNIX-like system,
+this can be accompolished like so:
+
+----
+$ ssh -XL 1234:<LOAD BALANCER IP>:80 stack@<OVH IP>
+----
