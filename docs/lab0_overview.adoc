@@ -113,6 +113,7 @@ $ curl 172.24.4.19 2>&1 | grep 'served by'
 An OpenStack loadbalancer has been placed in front of the instances. Use the openstack command to retrieve the details
 and access the IP:
 
+[subs=+quotes]
 ----
 $ openstack loadbalancer list
 +--------------------------------------+-------+----------------------------------+-------------+---------------------+----------+
@@ -121,13 +122,13 @@ $ openstack loadbalancer list
 | 800456ff-6b1a-40cd-a17b-ebed02f95160 | weblb | b0796a9f0938466b9e9771c01d5bd2ba | 172.24.4.11 | ACTIVE              | amphora  |
 +--------------------------------------+-------+----------------------------------+-------------+---------------------+----------+
 $ curl 172.24.4.11 2>&1 | grep 'served by'
-      served by: web0.novalocal
+      served by: *web0.novalocal*
 $ curl 172.24.4.11 2>&1 | grep 'served by'
-      served by: web1.novalocal
+      served by: *web1.novalocal*
 $ curl 172.24.4.11 2>&1 | grep 'served by'
-      served by: web0.novalocal
+      served by: *web0.novalocal*
 $ curl 172.24.4.11 2>&1 | grep 'served by'
-      served by: web1.novalocal
+      served by: *web1.novalocal*
 ----
 
 To access the web page in a GUI, ssh forwarding needs to be configured. If you are on a UNIX-like system,
