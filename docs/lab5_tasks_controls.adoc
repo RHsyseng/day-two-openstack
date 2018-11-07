@@ -1,0 +1,403 @@
+= Lab 5: Task Control, Handlers, Registered Variables
+
+In lab five, we take a closer look at how to create conditionals and loops,
+and how to implement handlers all within an Ansible playbook.
+
+== Conditionals
+
+When executing tasks, a conditional may be used in order to determine if a
+particular task should be executed or skipped. This is done using the `when`
+statement in a task. For example:
+
+----
+- hosts: web
+  vars:
+    package: httpd
+tasks:
+  - name: "Install my {{ package }}"
+    yum:
+      name: "{{ package }}"
+    when: package is defined
+----
+
+The above example states that for all hosts in the web group install the
+package variable _package_ when _package_ is defined. In this case, _package_
+is defined with the value _httpd_. If _package_ were left without a value, the
+task would be automatically skipped by Ansible.
+
+
+== Loops
+
+The purpose of loops within Ansible is to save an administrator time on having
+to write multiples of the same task that uses the same module for different
+values. For example, if I needed to install X number of packages, an administrator
+could create one Ansible task that installs those packages using the `yum`
+module by iterating over a list of packages to ensure they are installed.
+
+
+Without loops, say we wanted to install `httpd`, `vim`, `chrony`. The playbook
+would include the following tasks:
+
+----
+- name: Install httpd
+  yum:
+    name: httpd
+    state: present
+
+- name: Install vim
+  yum:
+    name: vim
+    state: present
+
+- name: Install chrony
+  yum:
+    name: chrony
+    state: present
+----
+
+The above is inefficient, because the same task is written multiple times with just one value changed.
+Instead a loop can be used (`loop`) to construct a list of packages to install as follows:
+
+----
+- name: Install packages
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - httpd
+    - vim
+    - chrony
+----
+
+NOTE: It is important to use the loop variable `"{{ item }}"` when defining the
+argument as this is a keyword used that lets Ansible know to use the list found
+within `loop`. The syntax must be exactly as it appears here: `"{{ item }}"`
+ otherwise you will get a syntax error when running your Ansible playbook.
+
+=== Loops over Lists of Dictonaries
+
+At times, the items in your list do not contain simple values but instead each
+item in the list is a dictionary key/value pair. An example is shown below.
+
+----
+- name: Create user and assign to appropriate group
+  user:
+    name: "{{ item.name }}"
+    state: present
+    groups: "{{ item.groups }}"
+  loop:
+    - { name: 'Mark', groups: 'consulting' }
+    - { name: 'John', groups: 'engineering' }
+----
+
+The above task would create a user for each item in the list. In this particular
+case, each item in the loop contains a name of a user and the group they are
+part of. The name argument contains the `"{{ item.name }}"` while the groups
+argument contains the `"{{ item.groups }}`
+
+=== Nested Loops
+
+At times there might be a loop within a loop that is required to properly
+iterate through a list of items. A nested loop requires at least two lists and a
+task that iterates each item in the first list in combination with each item in
+the second list.
+
+An example from the Ansible documentation is shown below.
+
+----
+- name: give users access to multiple databases
+  mysql_user:
+    name: "{{ item[0] }}"
+    priv: "{{ item[1] }}.*:ALL"
+    append_privs: yes
+    password: "foo"
+  loop: "{{ query('nested', [ 'alice', 'bob' ], [ 'clientdb', 'employeedb', 'providerdb' ]) }}"
+----
+
+The example above iterates six times. It adds the privileges for user _alice_
+to each of the three databases: _clientdb_, _employeedb_, _providerdb_. It then
+iterates again this time using the _bob_ user and adds the three databases.
+
+=== Reviewing our Ansible Tasks: Using Conditionals
+
+In this exercise, we want to discuss a specific conditional, `failed_when`
+that we previously saw in our Cinder restore Ansible playbook.
+
+The `failed_when` conditional is one that is used when we are looking for a
+certain error code or output of a specific command. In the previous tasks, we
+had the following
+
+----
+- name: Restore Cinder backup volume
+  command: openstack volume backup restore dbvol_backup dbvol"
+  delegate_to: localhost
+  register: vol_restore
+  failed_when:
+  - vol_restore.rc > 0
+  - "'VolumeBackupsRestore' not in vol_restore.stderr"
+----
+
+What does the above task do?
+
+The above task runs a `command` on our localhost and stores the value of
+the task in a variable labeled _vol_restore_. This task will only fail
+when the return code (rc) of _vol_restore_ is greater than zero and when the
+string "VolumeBackupsRestore" is not in the VolumeBackupsRestore error output.
+If any of those conditionals are true, the task is skipped.
+
+NOTE: For this task, the conditional is necessary due to a bug in the openstack
+client. https://bugs.launchpad.net/python-openstackclient/+bug/1733315[Click here if you're interested.]
+
+The `when` keyword is another Ansible conditional, and behaves much like a standard
+`if` statement in programming. We can use the `when` keyword at times when a task
+should only be ran if some other condition is met. Previously we saw an example task using
+the `yum` module, however `yum` only works on RPM-based Linux distributions such as CentOS and
+Red Hat Enteprise Linux. The task can be modified to only execute if the host is running such a distribution:
+
+----
+- name: Install httpd
+  yum:
+    name: httpd
+    state: present
+    when: ansible_distribution == 'CentOS'
+----
+
+
+=== Guided Exercise: Using Loops
+
+In this exercise, we want to discuss a specific loop, `until`
+that we previously saw in our Cinder restore Ansible tasks.
+
+At times, we may want to retry a task until a certain condition is met. In this
+case, we use the `until` keyword.
+
+In the previous Cinder restore tasks we had the following:
+
+.tasks/cinder_restore.yml
+----
+- name: Wait for the restore of the database volume
+  command: "openstack volume show -c status -f value dbvol"
+  register: restore_progress
+  until: restore_progress.stdout is search("available")
+  retries: 60
+  delay: 5
+  delegate_to: localhost
+----
+
+The above task runs a `command` on our localhost and stores the value of
+the command in a variable labelled _restore_progress_. This task will retry up
+to 60 times and delay 5 seconds per try until the standard output of the
+_restore_progress_ variable finds the string value "available". If the condition
+is not met after 60 retries, the task will fail.
+
+If you've run the backup playbook more than once, you'll have noticed that multiple backups named 'dbvol_backup'
+(with different UUIDs) are piling up and need to be cleaned up. Otherwise, the restore playbook will
+fail when it finds more than one backup called 'dbvol_backup.'
+
+This defect can now be addressed by first checking to see if a backup already exists and deleting it
+if present, before taking the new backup. This can be done by _registering_ the output from an
+`openstack cinder volume backup list` command, and inspecting it for a backup called 'dbvol_backup'.
+
+Another issue with this playbook is the 'hack' of inserting an arbitrary sleep to ensure the backup
+has time to complete. Attempt to rewrite the following task using the `until` loop instead of
+using a `sleep` within the `shell` command.
+
+
+
+.cinder_backup.yml
+----
+---
+- name: Backing up the database via the Cinder service
+  hosts: db
+  tasks:
+  - name: Stop the database
+    systemd:
+      name: mongod
+      state: stopped
+    become: true
+  - name: Create a Cinder Backup of Database Volume
+    command: "openstack volume backup create --force --name dbvol_backup dbvol"
+    delegate_to: localhost
+  - name: Wait for backup to complete and then run the openstack volume backup list command
+    shell: "sleep 45 && openstack volume backup list"
+    register: output
+    delegate_to: localhost
+  - name: Start the database
+    systemd:
+      name: mongod
+      state: started
+    become: true
+
+  - debug: var=output.stdout_lines
+...
+----
+
+Answer to exercise:
+
+.cinder_backup_updated.yml
+----
+---
+- name: Backing up the database via the Cinder service
+  hosts: db
+  tasks:
+  - name: Check for an existing backup
+    command: "openstack volume backup list -c Name -f value"
+    register: backup_list
+    delegate_to: localhost
+  - debug: var=backup_list
+  - name: Delete the existing cinder backup
+    command: "openstack volume backup delete dbvol_backup"
+    when: backup_list.stdout is search("dbvol_backup")
+    delegate_to: localhost
+  - name: Stop the database
+    systemd:
+      name: mongod
+      state: stopped
+    become: true
+  - name: Create a Cinder Backup of Database Volume
+    command: "openstack volume backup create --force --name dbvol_backup dbvol"
+    delegate_to: localhost
+  - name: Wait for backup to complete and then run the openstack volume backup list command
+    command: "openstack volume backup list"
+    register: output
+    until: output.stdout is search("available")
+    retries: 20
+    delay: 5
+    delegate_to: localhost
+  - name: Start the database
+    systemd:
+      name: mongod
+      state: started
+    become: true
+
+  - debug: var=output.stdout_lines
+...
+----
+
+Re-run the newly updated ansible playbook
+
+----
+$ ansible-playbook cinder_backup_updated.yml
+----
+
+== Handlers
+
+Handlers are a special task that are inactive unless triggered by calling
+the `notify` statement. When the `notify` statement is called, all the tasks
+within a playbook are run and then they are followed by the handler tasks.
+The handler tasks are all written under a special section labelled _handlers_.
+
+Why are handlers important?
+
+Handlers are great for when you need to for example restart a service (perhaps due
+to a configuration change to a service) or you need to reboot a host after the
+playbook changes have been made.
+
+The below is an example of copying a configuration file to a certain destination
+and requiring the `httpd` service to be restarted after the task is complete.
+
+----
+
+  tasks:
+
+    - name: Copying a example.conf file
+      copy:
+        src: /local/path/to/example.conf
+        dest: /remote/path/to/example.conf
+      notify:
+        - restart_apache
+
+  handlers:
+    - name: restart_apache
+      service:
+        name: httpd
+        state: restarted
+----
+
+The above example goes through all the tasks (in this case, we just have one
+task using the copy module), it then calls the notify handler specific to the
+handler task labelled _restart_apache_. Once all the tasks are complete, the
+handler with the name _restart_apache_ is invoked and it restarts the `httpd`
+service.
+
+=== Guided Exercise: Using Handlers
+
+In this exercise, we want to take the _tasks/cinder_restore.yml_ file created previously
+and incorporate handlers where appropriate. Looking closely at the
+_tasks/cinder_restore.yml_ file, we can see that an appropriate location for setting
+up a handler would be in this snippet.
+
+----
+- name: Mount the database volume
+  mount:
+    path: "{{ db_vol_path }}"
+    state: mounted
+    src: LABEL="{{ volume_name }}"
+    fstype: xfs
+  become: true
+- name: Start the {{ service_name }} database
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+  become: true
+----
+
+In order to convert this snippet to use handlers we will use _notify_
+that starts up the MongoDB database and notify it after successful completion of the mount task.
+
+
+.tasks/cinder_restore.yml
+----
+tasks:
+  - name: Mount the database volume
+    mount:
+      path: "{{ db_vol_path }}"
+      state: mounted
+      src: "LABEL={{ volume_name }}"
+      fstype: xfs
+    become: true
+    notify:
+      - start_service
+----
+
+Once we have added the _notify_ we need to create a directory labeled _handlers_
+that holds the _services.yml_ file.
+
+-----
+$ cd $HOME/openstack-ansible
+$ mkdir handlers
+$ vi handlers/services.yml
+- name: start_service
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+  become: true
+-----
+
+Once the handler has been created, we can included it in our _simplified_cinder_restore.yml_
+as such:
+
+----
+$ cat $HOME/openstack-ansible/simplified_cinder_restore.yml
+---
+- hosts: db
+  vars_files:
+    - vars/db_vars.yml
+  handlers:
+  - import_tasks: handlers/services.yml
+  tasks:
+    - name: Initial preparation for Cinder volume restoration
+      include: tasks/cinder_restore_prep.yml
+    - name: Restoring a Cinder backup volume
+      include: tasks/cinder_restore.yml
+    - name: Prints various Ansible facts
+      debug:
+        msg: >
+          The running Kernel of {{ ansible_hostname }}
+          is {{ ansible_kernel }}
+      delegate_to: web0
+...
+----
+
+Notice how the handler is imported via  the _handlers_ task and the file
+_handlers/services.yml_ is imported.
