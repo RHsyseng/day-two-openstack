@@ -1,0 +1,144 @@
+= Lab 6: Comprehensive Review
+
+== Optional Bonus Lab
+If time permits, students can work through this bonus lab.
+In lab six we will apply some of what we learned to accomplish a new task:
+performing a rolling OS upgrade of our web servers, with the help of an OpenStack
+loadbalancer.
+
+This playbook should handle:
+
+* Checking if a server has any pending package updates
+* Removing the server from the load balancer pool
+* Update packages and reboot the host
+* Add the server back in to the pool when back online
+
+First, a couple of hints to get your started. You can retrieve information about the
+current load balancer and pool with the following:
+
+----
+$ openstack loadbalancer show weblb
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| admin_state_up      | True                                 |
+| created_at          | 2018-10-21T15:22:00                  |
+| description         |                                      |
+| flavor              |                                      |
+| id                  | f9d18367-0c5b-481a-b72c-dc5eddcf1c44 |
+| listeners           | c756d025-bac8-46c9-a7f3-7d40f2e5b9ca |
+| name                | weblb                                |
+| operating_status    | ONLINE                               |
+| pools               | 37d58607-a4ec-480c-a388-3a92e60d3482 |
+| project_id          | b0796a9f0938466b9e9771c01d5bd2ba     |
+| provider            | amphora                              |
+| provisioning_status | ACTIVE                               |
+| updated_at          | 2018-10-21T15:23:41                  |
+| vip_address         | 172.24.4.11                          |
+| vip_network_id      | 29e88081-d40f-4463-8bd6-f13a511aed5a |
+| vip_port_id         | 46d724fa-8770-473e-8da1-832cae8ae569 |
+| vip_qos_policy_id   | None                                 |
+| vip_subnet_id       | 4908af3c-075b-4024-8186-32a5286d8e1a |
++---------------------+--------------------------------------+
+$ openstack loadbalancer pool show weblb_pool
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| admin_state_up      | True                                 |
+| created_at          | 2018-10-21T15:23:24                  |
+| description         |                                      |
+| healthmonitor_id    |                                      |
+| id                  | 37d58607-a4ec-480c-a388-3a92e60d3482 |
+| lb_algorithm        | ROUND_ROBIN                          |
+| listeners           | c756d025-bac8-46c9-a7f3-7d40f2e5b9ca |
+| loadbalancers       | f9d18367-0c5b-481a-b72c-dc5eddcf1c44 |
+| members             | 54dc0cc0-cb0f-4303-bc41-9fefca2a438e |
+|                     | b297a100-69f9-475b-8e3c-1c48d1366acd |
+| name                | weblb_pool                           |
+| operating_status    | ONLINE                               |
+| project_id          | b0796a9f0938466b9e9771c01d5bd2ba     |
+| protocol            | HTTP                                 |
+| provisioning_status | ACTIVE                               |
+| session_persistence | None                                 |
+| updated_at          | 2018-10-21T15:23:41                  |
++---------------------+--------------------------------------+
+----
+
+Ansible now includes a number of modules for dealing with OpenStack load balancers.
+They can be found https://docs.ansible.com/ansible/latest/modules/list_of_cloud_modules.html#openstack[here].
+
+The https://docs.ansible.com/ansible/latest/user_guide/playbooks_delegation.html#rolling-update-batch-size[`serial`]
+keyword can be handy for controlling the number of hosts managed at one time.
+
+Assignment: Attempt to create a _playbook.yml_ file that accomplishes all the
+task bullets. Ensure to take advantage of the Ansible documentation for clues
+on how to complete each task and also via command-line make use of the `ansible-doc`
+command for examples.
+
+Example of using `ansible-doc`:
+
+----
+$ ansible-doc os_member
+----
+
+The above command would provide documentation on how to use the OpenStack
+`os_member` module.
+
+NOTE: While testing and running your playbook, you can observe which host is serving
+each request by `curl`ing the load balancer IP:
+----
+$ curl 172.24.4.11 2>&1 | grep 'served by:'
+      served by: web1.novalocal
+$ curl 172.24.4.11 2>&1 | grep 'served by:'
+      served by: web0.novalocal
+----
+
+== Answer to comprehensive review
+
+----
+---
+- name: perform a rolling OS upgrade of web nodes
+  hosts: web
+  gather_facts: true
+  user: centos
+  serial: 1
+  tasks:
+  - name: check for pending updates
+    yum:
+      list: updates
+    register: yum_update
+  - block:
+      - name: remove web server from pool
+        os_member:
+          state: absent
+          name: '{{ ansible_hostname }}'
+          pool: weblb_pool
+        delegate_to: localhost
+      - name: update packages
+        package:
+          name: '*'
+          state: latest
+        become: true
+      - name: reboot server
+        shell: sleep 5 && reboot &
+        async: 1
+        poll: 0
+      - name: wait for server
+        wait_for_connection:
+          connect_timeout: 20
+          sleep: 5
+          delay: 5
+          timeout: 600
+        become: true
+      - name: put server back in pool
+        os_member:
+          state: present
+          name: '{{ ansible_hostname }}'
+          pool: weblb_pool
+          address: '{{ ansible_default_ipv4.address }}'
+          protocol_port: 80
+        delegate_to: localhost
+    when:
+    - yum_update.results | length > 0
+...
+----
