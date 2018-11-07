@@ -367,4 +367,4 @@ failure is similar to:
 ----
 
 The above error points indicates "permission denied" which in this case means
-the proper user (centos) was not specified in your ansible.cfg file.
+the proper user `centos` was not specified in your `ansible.cfg` file.
