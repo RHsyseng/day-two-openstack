@@ -121,7 +121,7 @@ file and change the permissions of the python script to be executable.
 +
 ----
 $ wget https://raw.githubusercontent.com/RHsyseng/day-two-openstack/master/openstack_inventory.py
-chmod +x openstack_inventory.py
+$ chmod +x openstack_inventory.py
 ----
 
 NOTE: Do not name the file _openstack.py_ as this will conflict with imports from
@@ -149,7 +149,7 @@ _etc_ directory exists:
 $ ls /etc/openstack
 ----
 +
-. `cat` the _clouds.yml_ file to note the access credentials to your OpenStack cloud:
+. `cat /etc/openstack/clouds.yml` to note the access credentials to your OpenStack cloud:
 +
 ----
 clouds:
