@@ -58,8 +58,8 @@ The following tables provide specific details about the environment that is to
 be used.
 
 |====
-| *OpenStack Dashboard* | *OpenStack RC File Location* | *OpenStack User* | *Openstack Project*
-| https://<ip_of_instance>/dashboard | /opt/stack/devstack/openrc | demo | password
+| *OpenStack RC File Location* | *OpenStack User* | *Openstack Project*
+|  /opt/stack/devstack/openrc | demo | password
 |====
 
 The details of the instance including the name and IP address will be
@@ -74,15 +74,6 @@ The student's public SSH key i.e. `id_rsa.pub` on their workstation will be
 required in order to SSH into the instance.
 
 For documentation in how to generate a SSH key, please visit http://docs.ovh.ca/en/guides-ssh-publiccloud.html[here].
-
-To copy your SSH key into the instance you could use the *ssh-copy-id* command
-in Linux/MacOS or manually into the appropriate directory structure. The root
-credentials for the instance are:
-
-|====
-| *Username* | *Password*
-| root | OpenStack+Berlin
-|====
 
 == Web Stack Details
 
