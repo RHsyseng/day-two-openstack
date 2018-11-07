@@ -40,7 +40,7 @@ be seen below:
 
 [.text-center]
 .Ansible Architecture
-image::images/ansible_architecture.png[float="center",align="center"]
+image::../images/ansible_architecture.png[float="center",align="center"]
 
 {nbsp} +
 
