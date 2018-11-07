@@ -1,0 +1,575 @@
+= Lab 4: Introduction to Variables, Facts, Includes and Registered Variables
+
+In this lab we will continue our journey with Ansible by learning about variables, facts, and includes.
+
+== Variables in Ansible
+
+There are multiple ways that variables can be utilized in Ansible to store values that can be
+reused to simplify the creation and maintenance of a project while reducing errors.
+
+Using variables provide a convenient way to manage dynamic values for a given environment in your
+Ansible project. Some examples of values that variables might contain include:
+
+* file names
+* file paths
+* URLs
+
+=== Naming variables
+
+Variables should have names which consist of a string that must start with a letter and can
+only contain letters, numbers, and underscores. Here is a list of variables named using the correct terminology:
+
+* user_name
+* file_1
+* file_2
+* openstack_api_url
+
+=== Defining variables
+
+You could define variables in multiple ways for the execution, and there are three scope levels where a variable could be defined:
+
+* Global scope: Global scope variables are set from the command line or in the Ansible configuration file
+* Play scope: Play scope variables are set in the play and related structures
+* Host scope: Host scope variables are set on host groups and individual hosts by the inventory, fact gathering, or registered tasks
+
+There is something fundamental to know when defining variables: if the same variable name is set at
+more than one level, the higher level wins. Here is an example: if the variable openstack_api_url is
+defined by the inventory, it could be overridden if the same variable is defined in the playbook,
+and that could be overridden if defined on the command line.
+
+==== Variables in Playbooks
+
+You could define variables in playbooks, for example, a variable *service_name*
+can be defined with a value of **mongod**. This could be defined in
+multiple ways, as shown below:
+
+* In vars block at the beginning of Playbook:
+
+[source,]
+----
+- hosts: db
+  vars:
+    service_name: mongod
+    volume_name: dbvol
+    db_vol_path: /var/lib/mongodb
+    device_path: /dev/vdb
+    cloud: devstack
+----
+
+* In an external variable file:
+
+[source,]
+----
+- hosts: localhost
+  vars_files:
+    - vars/db_vars.yml
+----
+
+Inside the variable file, variables are defined in YAML format:
+
+[source,]
+----
+service_name: mongod
+volume_name: dbvol
+db_vol_path: /var/lib/mongodb
+device_path: /dev/vdb
+cloud: devstack
+----
+
+To use the variables, you need to reference it inside double curly braces
+i.e. _{{ <var_name> }}_. Ansible will substitute the variable with its value when
+the task is executed:
+
+[source,]
+----
+---
+- hosts: db
+  vars_files:
+    - vars/db_vars.yml
+  tasks:
+  - name: Stop the {{ service_name }} database
+    systemd:
+      name: "{{ service_name }}"
+      state: stopped
+  - name: Unmount the database volume
+    mount:
+      path: "{{ db_vol_path }}"
+      state: unmounted
+...
+----
+
+In the previous example, we are using some of the variables declared
+within our _vars/db_vars.yml_ file.
+
+NOTE: Quotes are very important when declaring variables as the first element starting the value. If missing
+you will get an error.
+
+==== Host Variables and Group Variables
+
+There are two other types of variables in Ansible that are applied at the
+inventory level. They are __host variables__ and __group variables__. _group_variables_
+apply to an entire group of hosts. There variables are typically defined in static
+inventory files or from dynamic inventory scripts. Below is an example of using a
+static inventory file. Note that a static inventory file is in INI format,
+not the YAML we've been using up to now. The difference is key/value pairs are separated by
+**=** instead of **:**.
+
+* Here is an example for a host variable:
+
+[source,]
+----
+[db_servers]
+db0.example.com ansible_user=db
+----
+
+* Here is an example for a group variable:
+
+[source,]
+----
+[web_servers]
+web0.example.com
+web1.example.com
+
+[web_servers:vars]
+ansible_user=web
+----
+
+For more detail on host and group variables, please
+visit: http://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#host-variables[here] .
+
+=== Facts
+
+Facts in Ansible are variables that are automatically discovered. Facts
+contain host-specific information that can be used just like regular variables.
+
+Some of the facts gathered for a managed host might include:
+
+* Host name
+* Kernel version
+* IP addresses
+* OS version
+* and more...
+
+Every play runs the setup module automatically before the first task to gather
+facts from the managed node. You don't need to have a task to run setup in your
+play; it is automatically run for you by Ansible.
+
+Here is an example playbook that shows the running kernel and hostname of a
+system:
+
+[source,]
+----
+---
+- hosts: all
+  tasks:
+    - name: Prints various Ansible facts
+      debug:
+        msg: >
+          The running Kernel of {{ ansible_hostname }}
+          is {{ ansible_kernel }}
+----
+
+While the ansible_hostname variable provides the FQDN of a host, if you are looking
+for the shortname of a host, you can replace the ansible_hostname variable with
+inventory_hostname_short.
+
+In order to see how the Setup module works,
+please visit: http://docs.ansible.com/ansible/latest/modules/setup_module.html
+
+For more details about facts: http://docs.ansible.com/ansible/latest/user_guide/playbooks_variables.html#information-discovered-from-systems-facts
+
+=== Includes
+
+A best practice when writing complex or lengthy playbooks is to use separate
+files to divide tasks and lists of variables for more natural management.
+There are multiple ways to include task files and variables in a playbook.
+
+* Tasks can be included in a playbook from an external file:
+
+[source,]
+----
+ tasks:
+   - name: Initial preparation for Cinder volume restoration
+     include: tasks/cinder_vol_prep.yml
+   - name: Restoring a Cinder backup volume
+     include: tasks/cinder_vol_restore.yml
+----
+
+Also, you could use the _include_vars_ as previously shown to include variables
+from JSON or YAML files:
+
+[source,]
+----
+- hosts: localhost
+  vars_files:
+    - vars/db_vars.yml
+----
+
+Using multiple, external files for tasks and variables is a convenient way to
+build the main playbook in a modular way. You could use the *include* directive
+to have a task file inserted at a particular point in a playbook. This also allows
+you to reuse common sets of tasks across different playbooks.
+
+== Registered Variables
+
+At times there might be a set of output that a particular Ansible task does
+that you want to capture. In order to capture this value, we need to store it
+in a variable using the `register` statement.
+
+An example from the Ansible documentation is shown below.
+
+----
+   tasks:
+
+     - name: Run a script named foo
+       shell: /usr/bin/foo
+       register: foo_result
+
+     - name: Run a script named bar
+       shell: /usr/bin/bar
+       when: foo_result.rc == 5
+----
+
+The first task runs a script named foo and captures the result of foo and
+stores it in a variable labeled _foo_result_. The second task that runs a script
+named bar only executes when the return code (rc) of foo_result is equal to 5.
+
+If interested in seeing the different types of values that a registered variable
+can return, you may use the `debug` module to display it.
+
+An example is shown below.
+
+----
+   tasks:
+
+     - name: Run a script named foo
+       shell: /usr/bin/foo
+       register: foo_result
+
+     - name: debugging the variable foo_result
+       debug:
+         var: foo_result
+----
+
+Due to time limitations, we will not cover:
+
+- Tags
+- Special variables
+
+Be sure to visit the http://docs.ansible.com/ansible/latest/index.html[Ansible]
+documentation for more details.
+
+== Guided Exercise: Ansible Playbook - Restoring a Database using Cinder
+
+With a brief introduction to variables, facts, and includes we will take an
+existing playbook and modify it so that it is taking advantage of what we just
+learned.
+
+In this exercise the objectives are:
+
+* Create a variable file that consists of all the variables we will use in this
+newly created playbook.
+* Create two task files breaking up the process of restoring a cinder volume.
+** The first task file will handle the following tasks:
+*** Stopping the MongoDB database
+*** Umounting the database volume
+*** Detaching the volume from the server
+** The second task file will handle the following tasks:
+*** Restoring the Cinder backup volume
+*** Waiting for the restore of the database volume
+*** Reattaching the volume to the database server
+*** Starting the MongoDB database
+* Create a task that outputs the hostname and kernel of the server web0.
+
+Playbook that needs modification is specified below.
+
+NOTE: When unsure how to use a particualr module, be sure to use the `ansible-doc`
+command. For example, if we wanted to find more information about the `systemd`
+module, within our console we could run the command: `ansible-doc systemd`
+
+.mod-me-playbook.yml
+----
+---
+- hosts: db
+  tasks:
+  - name: Stop the MongoDB database
+    systemd:
+      name: mongod
+      state: stopped
+    become: true
+  - name: Unmount the database volume
+    mount:
+      path: /var/lib/mongodb
+      state: unmounted
+    become: true
+  - name: Detach volume from server
+    os_server_volume:
+      state: absent
+      cloud: devstack
+      server: db0
+      volume: dbvol
+    delegate_to: localhost
+  - name: Restore Cinder backup volume
+    command: "openstack volume backup restore dbvol_backup dbvol"
+    delegate_to: localhost
+    register: vol_restore
+    failed_when:
+    - vol_restore.rc > 0
+    - "'VolumeBackupsRestore' not in vol_restore.stderr"
+  - name: Wait for the restore of the database volume
+    command: "openstack volume show -c status -f value dbvol"
+    register: restore_progress
+    until: restore_progress.stdout is search("available")
+    retries: 60
+    delay: 5
+    delegate_to: localhost
+  - name: Reattach volume to the database server
+    os_server_volume:
+      state: present
+      server: db0
+      cloud: devstack
+      volume: dbvol
+      device: /dev/vdb
+    delegate_to: localhost
+  - name: Mount the database volume
+    mount:
+      path: /var/lib/mongodb
+      state: mounted
+      src: LABEL=dbvol
+      fstype: xfs
+    become: true
+  - name: Start the MongoDB database
+    systemd:
+      name: mongod
+      state: started
+    become: true
+...
+----
+
+The first step of the process is to identify everything in the existing Ansible
+playbook that we can create variables for. Once we have identified our variables,
+we will create a _vars_ directory with a file labeled _db_vars.yml_ to store
+that information.
+
+On the OVH instance, create a vars/db_vars.yml file
+
+----
+$ cd $HOME/openstack-ansible
+$ mkdir vars
+$ vi vars/db_vars.yml
+service_name: mongod
+volume_name: dbvol
+db_vol_path: /var/lib/mongodb
+device_path: /dev/vdb
+----
+
+Next, we will create a tasks file that will breakup the existing Ansible playbook
+into two segments. One segment is to prepare the environment for the Cinder restore
+and the other segment will do the actual Cinder volume restoration.
+
+----
+$ cd $HOME/openstack-ansible
+$ mkdir tasks
+----
+
+In the initial instructions, it mentioned the first task file should include:
+
+* Stopping the MongoDB database
+* Umounting the database volume
+* Detaching the volume from the server
+
+From the existing playbook, this currently looks as:
+
+----
+- name: Stop the MongoDB database
+  systemd:
+    name: mongod
+    state: stopped
+- name: Unmount the database volume
+  mount:
+    path: /var/lib/mongodb
+    state: unmounted
+- name: Detach volume from server
+  os_server_volume:
+    state: absent
+    cloud: devstack
+    server: db0
+    volume: dbvol
+  delegate_to: localhost
+----
+
+Within the task directory, create a file labeled _cinder_restore_prep.yml_ and
+take the above snippet and place it into this newly created yml file and modify
+values with variables were appropriate. The final result will be similar to:
+
+.cinder_restore_prep.yml
+----
+- name: Stop the MongoDB database
+  systemd:
+    name: "{{ service_name }}"
+    state: stopped
+  become: true
+- name: Unmount the database volume
+  mount:
+    path: "{{ db_vol_path }}"
+    state: unmounted
+  become: true
+- name: Detach volume from server
+  os_server_volume:
+    state: absent
+    cloud: "{{ cloud }}"
+    server: "{{ inventory_hostname_short }}"
+    volume: "{{ volume_name }}"
+  delegate_to: localhost
+----
+
+Next, within the same task directory, create a file named _cinder_restore.yml_
+that captures the following tasks:
+
+* Restoring the Cinder backup volume
+* Waiting for the restore of the database volume
+* Reattaching the volume to the database server
+* Starting the MongoDB database
+
+Those tasks within the original Ansible playbook look as follows:
+
+----
+- name: Restore Cinder backup volume
+  command: "openstack volume backup restore dbvol_backup dbvol"
+  delegate_to: localhost
+  register: vol_restore
+  failed_when:
+  - vol_restore.rc > 0
+  - "'VolumeBackupsRestore' not in vol_restore.stderr"
+  become: true
+- name: Wait for the restore of the database volume
+  command: "openstack volume show -c status -f value dbvol"
+  register: restore_progress
+  until: restore_progress.stdout is search("available")
+  retries: 60
+  delay: 5
+  delegate_to: localhost
+- name: Reattach volume to the database server
+  os_server_volume:
+    state: present
+    server: db0
+    cloud: devstack
+    volume: dbvol
+    device: /dev/vdb
+  delegate_to: localhost
+- name: Mount the database volume
+  mount:
+    path: /var/lib/mongodb
+    state: mounted
+    src: LABEL=dbvol
+    fstype: xfs
+  become: true
+- name: Start the MongoDB database
+  systemd:
+    name: mongod
+    state: started
+  become: true
+----
+
+Modify the above tasks with variables where appropriate. For example, changing
+server: db0 to server: "{{ inventory_hostname_short }}" The final result when the changes
+are completed will be similar to:
+
+
+.cinder_restore.yml
+----
+- name: Restore Cinder backup volume
+  command: "openstack volume backup restore dbvol_backup dbvol"
+  delegate_to: localhost
+  register: vol_restore
+  failed_when:
+  - vol_restore.rc > 0
+  - "'VolumeBackupsRestore' not in vol_restore.stderr"
+- name: Wait for the restore of the database volume
+  command: "openstack volume show -c status -f value dbvol"
+  register: restore_progress
+  until: restore_progress.stdout is search("available")
+  retries: 60
+  delay: 5
+  delegate_to: localhost
+- name: Reattach volume to the database server
+  os_server_volume:
+    state: present
+    cloud: "{{ cloud }}"
+    server: "{{ inventory_hostname_short }}"
+    volume: "{{ volume_name }}"
+    device: "{{ device_path }}"
+  delegate_to: localhost
+- name: Mount the database volume
+  mount:
+    path: "{{ db_vol_path }}"
+    state: mounted
+    src: "LABEL={{ volume_name }}"
+    fstype: xfs
+  become: true
+- name: Start the MongoDB database
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+  become: true
+----
+
+NOTE: The variable labeled `inventory_hostname_short` is the shortname of the
+host. This is a special variable that is part of Ansible facts.
+
+Now with a variables file (_db_vars.yml_), and two task files
+(_cinder_restore_prep.yml_ and _cinder_restore.yml_) we can create an Ansible
+playbook that includes these files. This will simplify the readability and
+manageability of your playbooks.
+
+An example playbook of combining all the files looks as follows:
+
+.simplified_cinder_restore.yml
+----
+---
+- hosts: db
+  vars_files:
+    - vars/db_vars.yml
+  tasks:
+    - name: Initial preparation for Cinder volume restoration
+      include: tasks/cinder_restore_prep.yml
+    - name: Restoring a Cinder backup volume
+      include: tasks/cinder_restore.yml
+...
+----
+
+Lastly, the final step will take advantage of using Ansible facts. The request
+is to create a task that outputs the hostname and kernel of the server web0.
+In order to successfully do this, we will need to use the `delegate_to` keyword
+to assign the specific task to be run on the web0. Below is an example snippet:
+
+----
+- name: Prints various Ansible facts
+  debug:
+    msg: >
+      The running Kernel of {{ ansible_hostname }}
+      is {{ ansible_kernel }}
+  delegate_to: web0
+----
+
+The final version of our newly transformed Ansible playbook looks as follows:
+
+.Newly Transformed Ansible Cinder Restore Playbook
+----
+---
+- hosts: db
+  vars_files:
+    - vars/db_vars.yml
+  tasks:
+    - name: Initial preparation for Cinder volume restoration
+      include: tasks/cinder_restore_prep.yml
+    - name: Restoring a Cinder backup volume
+      include: tasks/cinder_restore.yml
+    - name: Prints various Ansible facts
+      debug:
+        msg: >
+          The running Kernel of {{ ansible_hostname }}
+          is {{ ansible_kernel }}
+      delegate_to: web0
+...
+----
