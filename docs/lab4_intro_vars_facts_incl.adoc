@@ -283,7 +283,7 @@ newly created playbook.
 
 Playbook that needs modification is specified below.
 
-NOTE: When unsure how to use a particualr module, be sure to use the `ansible-doc`
+NOTE: When unsure how to use a particular module, be sure to use the `ansible-doc`
 command. For example, if we wanted to find more information about the `systemd`
 module, within our console we could run the command: `ansible-doc systemd`
 
