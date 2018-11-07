@@ -25,13 +25,13 @@ To better understand the structure of a playbook, let us first review a simple a
 [source,]
 ----
 $ ansible web,db -m command -a "hostname"
-d7c5d271-2aa9-4186-91f1-abdc900554ee | CHANGED | rc=0 >>
+fda4c4a2-f655-49dc-997f-29d555d15d49 | CHANGED | rc=0 >>
 web1.novalocal
 
-a103664a-2a9f-4802-8cc0-9afb224050b4 | CHANGED | rc=0 >>
+3c0bc0ea-ce96-4ca5-ab89-442434c34088 | CHANGED | rc=0 >>
 web0.novalocal
 
-331a2613-9b53-4507-a34e-8378782539dd | CHANGED | rc=0 >>
+8572e2c5-36d2-489a-a71f-7ff911958a7b| CHANGED | rc=0 >>
 db0.novalocal
 ----
 
@@ -116,7 +116,25 @@ _single-task-playbook.yml_ from the previous example.
 
 [source,]
 ----
-$ ansible-playbook single-task-playbook.yml
+$ ansible-playbook single-task-playbook.yml 
+
+PLAY [Execute raw command to get hostname from system] ************************************************************************************
+
+TASK [Gathering Facts] ********************************************************************************************************************
+ok: [fda4c4a2-f655-49dc-997f-29d555d15d49]
+ok: [3c0bc0ea-ce96-4ca5-ab89-442434c34088]
+ok: [8572e2c5-36d2-489a-a71f-7ff911958a7b]
+
+TASK [Hostname command] *******************************************************************************************************************
+changed: [fda4c4a2-f655-49dc-997f-29d555d15d49]
+changed: [3c0bc0ea-ce96-4ca5-ab89-442434c34088]
+changed: [8572e2c5-36d2-489a-a71f-7ff911958a7b]
+
+PLAY RECAP ********************************************************************************************************************************
+3c0bc0ea-ce96-4ca5-ab89-442434c34088 : ok=2    changed=1    unreachable=0    failed=0   
+8572e2c5-36d2-489a-a71f-7ff911958a7b : ok=2    changed=1    unreachable=0    failed=0   
+fda4c4a2-f655-49dc-997f-29d555d15d49 : ok=2    changed=1    unreachable=0    failed=0   
+
 ----
 
 After the playbook is executed, output is generated to show the play and tasks.
