@@ -409,3 +409,5 @@ current database. For this simple exercise, click on the link to break the
 database and in the following sections we will create an Ansible playbook
 that restores the database back to it's original state of when the backup was
 taken.
+
+NOTE: When accessing via browser for the first time, it may take some time to initially load, please be patient.
