@@ -44,8 +44,14 @@ $ chmod +x $HOME/reset.sh
 . Execute the `reset.sh` script and pass the value 'configure'
 +
 ----
-./reset.sh configure
+$ ./reset.sh configure
 ----
-
-NOTE: Once the playbooks are complete, please revisit lab3 and create a new backup of the newly created database prior
-to continuing with lab4. 
++
+. Once the script has completed, re-run the cinder_backup.yml to create a new backup of your database.
++
+----
+$ ansible-playbook cinder_backup.yml 
+----
++
+. Once the backup is complete, via your browser or curl command click the 'DON'T CLICK ME' to kill the database and
+revisit lab 4 where you left off. 
