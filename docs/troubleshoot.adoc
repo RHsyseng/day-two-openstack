@@ -1,0 +1,51 @@
+= Troubleshooting Lab
+
+When restoring the database there are times that you may encounter the following error:
+
+----
+TASK [Mount the database volume] ******************************************************************************************
+fatal: [8572e2c5-36d2-489a-a71f-7ff911958a7b]: FAILED! => {"changed": false, "msg": "Error mounting /var/lib/mongodb: mount: can't find LABEL=dbvol\n"}
+	to retry, use: --limit @/opt/stack/openstack-ansible/simplified_cinder_restore.retry
+
+PLAY RECAP ****************************************************************************************************************
+8572e2c5-36d2-489a-a71f-7ff911958a7b : ok=7    changed=4    unreachable=0    failed=1   
+----
+
+If the above error is encountered, the following steps should be followed:
+
+. cd into the $HOME directory
++
+----
+$ cd $HOME
+----
++
+. Using a text editor like `vi` create the following script and save the file as `reset.sh`
++
+----
+#/bin/bash
+source /opt/stack/devstack/openrc demo
+cd ~/day-two-openstack
+ if [[ x$1 == x"configure" ]]; then
+  ## reset
+    ansible-playbook playbooks/delete_webapp.yml && \
+    ansible-playbook playbooks/delete_loadbalancer.yml -e @playbooks/devstack_env.yml && \
+    ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
+    ansible-playbook webapp/deploy.yml && \
+    ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
+  fi
+----
++
+. Make the `reset.sh` script executable.
++
+----
+$ chmod +x $HOME/reset.sh
+----
++
+. Execute the `reset.sh` script and pass the value 'configure'
++
+----
+./reset.sh configure
+----
+
+NOTE: Once the playbooks are complete, please revisit lab3 and create a new backup of the newly created database prior
+to continuing with lab4. 
