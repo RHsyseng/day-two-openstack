@@ -128,3 +128,5 @@ this can be accompolished like so:
 ----
 $ ssh -XL 1234:<LOAD BALANCER IP>:80 stack@<OVH IP>
 ----
+
+NOTE: When accessing via browser for the first time, it may take some time to initially load, please be patient.
