@@ -336,7 +336,7 @@ up a handler would be in this snippet.
   mount:
     path: "{{ db_vol_path }}"
     state: mounted
-    src: LABEL="{{ volume_name }}"
+    src: LABEL=dbvol
     fstype: xfs
   become: true
 - name: Start the {{ service_name }} database
@@ -357,7 +357,7 @@ tasks:
     mount:
       path: "{{ db_vol_path }}"
       state: mounted
-      src: "LABEL={{ volume_name }}"
+      src: LABEL=dbvol
       fstype: xfs
     become: true
     notify:
