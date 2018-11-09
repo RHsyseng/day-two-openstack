@@ -199,8 +199,12 @@ if present, before taking the new backup. This can be done by _registering_ the 
 `openstack cinder volume backup list` command, and inspecting it for a backup called 'dbvol_backup'.
 
 Another issue with this playbook is the 'hack' of inserting an arbitrary sleep to ensure the backup
-has time to complete. Attempt to rewrite the following task using the `until` loop instead of
+has time to complete. 
+
+Attempt to rewrite the following task using the `until` loop instead of
 using a `sleep` within the `shell` command.
+
+NOTE: Make sure the playbook is writte in the $HOME/openstack-ansible directory. 
 
 
 
