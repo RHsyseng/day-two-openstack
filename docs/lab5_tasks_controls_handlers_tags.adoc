@@ -405,3 +405,10 @@ $ cat $HOME/openstack-ansible/simplified_cinder_restore.yml
 
 Notice how the handler is imported via  the _handlers_ task and the file
 _handlers/services.yml_ is imported.
+
+Re-run the simplified_cinder_restore.yml file with the changes for completion.
+
+----
+$ cd $HOME/openstack-ansible
+$ ansible-playbook simplified_cinder_restore.yml
+----
