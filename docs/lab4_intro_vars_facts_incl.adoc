@@ -522,7 +522,7 @@ Now with a variables file (_db_vars.yml_), and two task files
 playbook that includes these files. This will simplify the readability and
 manageability of your playbooks.
 
-Create an example playbook under `$HOME/openshift-ansible` by combining all the files. Example below.
+Create an example playbook under `$HOME/openstack-ansible` by combining all the files. Example below.
 
 .simplified_cinder_restore.yml
 ----
