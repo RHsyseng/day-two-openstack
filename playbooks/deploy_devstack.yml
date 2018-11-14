@@ -179,6 +179,7 @@
       content: |
         #!/bin/bash
         set -e
+        export TERM=xterm
         cd /opt/stack/devstack
         su - stack -c /opt/stack/devstack/stack.sh
         sed -i 's/default_store = swift/default_store = file/g' /etc/glance/glance-api.conf
