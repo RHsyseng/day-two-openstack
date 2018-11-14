@@ -1,11 +1,11 @@
 ---
-#- name: install module
-#  command: pip install --editable '{{ build_dir }}/glog/src/{{ item }}'
-#  with_items:
-#  - glog-api
-#  become: true
-#  tags:
-#  - pip
+- name: install module
+  command: pip install --editable '{{ build_dir }}/glog/src/{{ item }}'
+  with_items:
+  - glog-api
+  become: true
+  tags:
+  - pip
 
 - name: allow http to listen on app port
   seport:

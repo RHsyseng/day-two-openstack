@@ -2,9 +2,3 @@
 - include_tasks: rhn.yml
   tags:
   - rhn
-#- include_tasks: git.yml
-#  tags:
-#  - git
-#- include_tasks: nfs.yml
-#  tags:
-#  - nfs

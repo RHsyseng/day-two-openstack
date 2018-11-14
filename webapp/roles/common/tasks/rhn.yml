@@ -15,15 +15,7 @@
   - 'policycoreutils-python'
   - 'python2-pip'
 
-#- name: upgrade pip
-#  command: pip install setuptools --upgrade
-#  become: true
-
-#- name: get get-pip.py
-#  copy:
-#    src: get-pip.py
-#    dest: /tmp/get-pip.py
-#- name: run get-pip.py
-#  command: python /tmp/get-pip.py
-#  become: true
+- name: upgrade pip
+  command: pip install setuptools --upgrade
+  become: true
 

@@ -8,15 +8,15 @@
       delay: 10
       timeout: 1200
 
-## moved tim image due to time
-#- name: common tasks for all hosts
-#  hosts: db, web
-#  tasks:
-#  - name: include common tasks
-#    include_role:
-#      name: common
-#  tags:
-#  - common
+- name: common tasks for all hosts
+  hosts: db, web
+  tasks:
+  - name: include common tasks
+    include_role:
+      name: common
+  tags:
+  - common
+
 - name: setup tasks for db host
   hosts: db
   tasks:
@@ -25,6 +25,7 @@
       name: db
   tags:
   - db
+
 - name: setup tasks for web hosts
   hosts: web
   vars:

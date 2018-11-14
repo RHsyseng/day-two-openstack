@@ -1,8 +1,8 @@
 ---
-#- include_tasks: rhn.yml
-#  tags:
-#  - rhn
-#  - glog-api
+- include_tasks: rhn.yml
+  tags:
+  - rhn
+  - glog-api
 - include_tasks: git.yml
 - include_tasks: glog-api.yml
   tags:

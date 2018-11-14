@@ -1,7 +1,7 @@
 ---
-#- include_tasks: rhn.yml
-#  tags:
-#  - rhn
+- include_tasks: rhn.yml
+  tags:
+  - rhn
 - include_tasks: mongo.yml
   tags:
   - mongo
