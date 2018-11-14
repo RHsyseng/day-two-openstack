@@ -17,3 +17,18 @@ Materials to support a hands-on lab @ https://bit.ly/2RJaSBL[OpenStack Summit in
 === <<docs/lab4_intro_vars_facts_incl.adoc#lab4-intro-vars-facts,Lab 4 - Introduction to Variables, Facts, and Includes>>
 === <<docs/lab5_tasks_controls_handlers_tags.adoc#lab-5-task-control-handlers-registered-variables-tags, Lab 5 - Task Control, Handlers, Registered Variables>>
 === <<docs/lab6_comprehensive_review.adoc#lab6-comprehensive-review, Lab 6 - Comprehensive Review>>
+
+# Lab Setup
+
+This lab can be recreated in your own environment to complete at your own pace.
+
+If you do not have an existing OpenStack environment, you can run the following on a bare-metal host to deploy devstack and then the lab environment on top:
+`$ ansible-playbook playbooks/deploy_devstack.yml`
+
+To deploy the lab against an existing OpenStack cloud, create an ansible variables file (see `playbooks/devstack_env.yml` for an example) and run the following:
+`ansible-playbook playbooks/deploy_webapp.yml -e @playbooks/devstack_env.yml && \
+ ansible-playbook webapp/deploy.yml && \
+ ansible-playbook playbooks/make_loadbalancer.yml -e @playbooks/devstack_env.yml
+`
+
+NOTE: If using an existing environment, it must support the `cinder-backup` and `octavia` services.

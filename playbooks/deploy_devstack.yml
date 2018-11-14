@@ -20,12 +20,6 @@
       state: restarted
     become: true
   tasks:
-#  - name: stop firewalld
-#    systemd:
-#      name: firewalld
-#      state: stopped
-#      enabled: false
-#    become: true
   - name: create stack user
     user:
       name: stack
