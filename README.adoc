@@ -6,6 +6,8 @@ Materials to support a hands-on lab @ https://bit.ly/2RJaSBL[OpenStack Summit in
 * The _webapp_ directory - hosts a sample application that is deployed on the instances. 
 * The _docs_ directory - contains all the lab exercises that were covered in the _Simplifying Day Two Operations with Ansible_ session. 
 
+Questions? Fee free to email rlopez at redhat.com or dcritch at redhat.com 
+
 # OpenStack Summit 2018: Day Two Operations with Ansible
 
 :numbered!:
