@@ -10,7 +10,7 @@ setup(
         'Flask',
         'flask-restplus',
         'pymongo==3.6.0',
-        'Werkzeug==0.14.1',
+        'Werkzeug==0.15.3',
         'python-dateutil==2.6.1',
     ],
     setup_requires=[
